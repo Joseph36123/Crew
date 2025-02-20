@@ -17,6 +17,7 @@ import Animated, {
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../types/types';
+import { CrewButton } from 'components/atoms';
 
 const { height } = Dimensions.get('window');
 
@@ -108,11 +109,17 @@ const Signup = () => {
                 />
               </View>
             </View>
-
-            {/* Sign Up Button */}
-            <View className="my-5 h-[50px] w-full items-center justify-center rounded-[30px] bg-[#AAD3FF]">
-              <Text className="font-cairo text-sm font-bold text-black">Sign Up</Text>
-            </View>
+            <CrewButton
+              variant="filled"
+              text="Sign up"
+              // iconName="send"
+              iconFamily="MaterialIcons"
+              color="secondary"
+              size="large"
+              onPress={() => console.log('Pressed')}
+              loading={false}
+              disabled={false}
+            />
 
             {/* Bottom Text */}
             <Text className="font-cairo text-center text-sm text-gray-500">

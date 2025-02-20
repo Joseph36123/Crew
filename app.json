@@ -12,7 +12,14 @@
       "tsconfigPaths": true
     },
 
-    "plugins": [],
+    "plugins": [
+      [
+        "expo-font",
+        {
+          "fonts": ["./assets/fonts/Inter-Black.otf"]
+        }
+      ]
+    ],
 
     "orientation": "portrait",
     "icon": "./assets/icon.png",
