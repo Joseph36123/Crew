@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+// screens/auth/signup.tsx
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   Image,
   Dimensions,
   TouchableWithoutFeedback,
@@ -17,7 +17,7 @@ import Animated, {
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../types/types';
-import { CrewButton } from 'components/atoms';
+import { CrewButton, TextInputField, Title } from '../../components/atoms';
 
 const { height } = Dimensions.get('window');
 
@@ -25,6 +25,9 @@ type NavigationProp = StackNavigationProp<AuthStackParamList, 'Signup'>;
 
 const Signup = () => {
   const navigation = useNavigation<NavigationProp>();
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
   // Animation values
   const logoOpacity = useSharedValue(0);
@@ -51,6 +54,31 @@ const Signup = () => {
     transform: [{ translateY: formPosition.value }],
   }));
 
+  const validatePhoneNumber = (number: string) => {
+    // Simple validation for US phone number (just checking if it has at least 10 digits)
+    const digitsOnly = number.replace(/\D/g, '');
+    return digitsOnly.length >= 10;
+  };
+
+  const handleSignup = () => {
+    // Validate inputs
+    if (!fullName.trim()) {
+      console.log('Please enter your full name');
+      return;
+    }
+
+    if (!validatePhoneNumber(phoneNumber)) {
+      setPhoneError('Please enter a valid US phone number');
+      return;
+    }
+
+    // Clear any previous errors
+    setPhoneError('');
+    
+    // Navigate to OTP verification with the phone number
+    navigation.navigate('OTPVerification', { phoneNumber });
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View className="flex-1 bg-[#191919]">
@@ -68,61 +96,52 @@ const Signup = () => {
           style={formStyle}>
           <View className="flex-1 items-center justify-start px-5 pb-10 pt-8">
             {/* Headers */}
-            <View className="mb-4 items-center">
-              <Text className="font-cairo text-center text-3xl font-bold text-gray-900">
-                New to Crew?
-              </Text>
-              <Text className="font-cairo mt-0.5 text-center text-3xl font-bold text-gray-900">
-                Sign Up
-              </Text>
-            </View>
+            <Title 
+              text="New to Crew?\nSign Up" 
+              containerClassName="mb-6"
+            />
 
             {/* Full Name Input */}
-            <View className="my-2.5 h-[50px] w-full justify-center rounded-full border border-gray-500 bg-white px-4">
-              <View className="flex-row items-center justify-between">
-                <TextInput
-                  className="font-cairo flex-1 text-sm text-black"
-                  placeholder="Full Name"
-                  placeholderTextColor="#C2C2C2"
-                />
-                <Image
-                  source={require('../../assets/images/contact.png')}
-                  className="h-6 w-6"
-                  resizeMode="contain"
-                />
-              </View>
-            </View>
+            <TextInputField
+              placeholder="Full Name"
+              value={fullName}
+              onChangeText={setFullName}
+              icon={require('../../assets/images/contact.png')}
+            />
 
             {/* Phone Number Input */}
-            <View className="my-2.5 h-[50px] w-full justify-center rounded-full border border-gray-500 bg-white px-4">
-              <View className="flex-row items-center justify-between">
-                <TextInput
-                  className="font-cairo flex-1 text-sm text-black"
-                  placeholder="Phone Number"
-                  placeholderTextColor="#C2C2C2"
-                  keyboardType="phone-pad"
-                />
-                <Image
-                  source={require('../../assets/images/phone.png')}
-                  className="h-6 w-6"
-                  resizeMode="contain"
-                />
-              </View>
-            </View>
+            <TextInputField
+              placeholder="Phone Number"
+              keyboardType="phone-pad"
+              value={phoneNumber}
+              onChangeText={(text) => {
+                setPhoneNumber(text);
+                if (phoneError) setPhoneError('');
+              }}
+              icon={require('../../assets/images/phone.png')}
+            />
+            
+            {/* Phone Number Error */}
+            {phoneError ? (
+              <Text className="font-cairo mt-1 self-start text-xs text-red-500">
+                {phoneError}
+              </Text>
+            ) : null}
+            
+            {/* Sign Up Button */}
             <CrewButton
               variant="filled"
               text="Sign up"
-              // iconName="send"
-              iconFamily="MaterialIcons"
               color="secondary"
               size="large"
-              onPress={() => console.log('Pressed')}
+              onPress={handleSignup}
               loading={false}
-              disabled={false}
+              disabled={!fullName.trim() || !phoneNumber.trim()}
+              className="mt-4"
             />
 
             {/* Bottom Text */}
-            <Text className="font-cairo text-center text-sm text-gray-500">
+            <Text className="font-cairo mt-4 text-center text-sm text-gray-500">
               Already have an account?{' '}
               <Text
                 className="font-cairo text-sm font-bold text-gray-500 underline"

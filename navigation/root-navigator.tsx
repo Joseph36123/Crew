@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import SplashScreen from '../screens/SplashScreen';
 import AuthNavigator from './auth-navigator';
 import TabNavigator from './tab-navigator';
-import { RootStackParamList } from 'types/types';
+import { RootStackParamList } from '../types/types';
 
 const Stack = createStackNavigator<RootStackParamList>();
 

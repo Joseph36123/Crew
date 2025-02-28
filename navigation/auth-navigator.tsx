@@ -1,8 +1,11 @@
+// navigation/auth-navigator.tsx
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
 
-import { Signin, Signup, OTPVerification } from 'screens/auth';
+import { Signin, Signup, OTPVerification } from '../screens/auth';
+import TermsConditionsScreen from '../screens/auth/terms-conditions';
+import NotificationsScreen from '../screens/auth/notifications';
 
 const Stack = createStackNavigator();
 
@@ -17,6 +20,16 @@ const AuthNavigator = () => {
         name="OTPVerification"
         component={OTPVerification}
         options={{ title: 'OTP Verification' }}
+      />
+      <Stack.Screen
+        name="TermsConditions"
+        component={TermsConditionsScreen}
+        options={{ title: 'Terms & Conditions' }}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ title: 'Notifications' }}
       />
     </Stack.Navigator>
   );

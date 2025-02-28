@@ -1,3 +1,4 @@
+// types/types.ts
 export type RootStackParamList = {
   Splash: undefined;
   Auth: undefined;
@@ -10,4 +11,6 @@ export type AuthStackParamList = {
   OTPVerification: {
     phoneNumber: string;
   };
+  TermsConditions: undefined;
+  Notifications: undefined;
 };
