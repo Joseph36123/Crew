@@ -98,7 +98,7 @@ const Signup = () => {
             {/* Headers */}
             <Title 
               text="New to Crew?\nSign Up" 
-              containerClassName="mb-6"
+              containerClassName="mb-6"            
             />
 
             {/* Full Name Input */}
