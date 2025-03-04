@@ -16,8 +16,9 @@ const Title: React.FC<TitleProps> = ({
   textClassName = '',
   ...textProps
 }) => {
-  // Split text by newline character if present
-  const textLines = text.split('\n');
+  // Handle both literal "\n" strings and actual newline characters
+  const processedText = text.replace(/\\n/g, '\n');
+  const textLines = processedText.split('\n');
 
   return (
     <View className={`${containerClassName}`}>
