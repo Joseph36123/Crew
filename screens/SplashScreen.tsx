@@ -27,11 +27,7 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.gifContainer}>
-        <Image 
-          source={require('../assets/gifs/ppp.gif')} 
-          style={styles.gif}
-          contentFit="contain"
-        />
+        <Image source={require('../assets/gifs/ppp.gif')} style={styles.gif} contentFit="contain" />
       </View>
     </View>
   );
@@ -53,5 +49,5 @@ const styles = StyleSheet.create({
   gif: {
     width: '100%',
     height: '100%',
-  }
+  },
 });

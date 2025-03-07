@@ -1,4 +1,3 @@
-// components/atoms/TextInputField.tsx
 import React from 'react';
 import { View, TextInput, TextInputProps, Image, ImageSourcePropType } from 'react-native';
 
@@ -15,20 +14,15 @@ const TextInputField: React.FC<TextInputFieldProps> = ({
   ...textInputProps
 }) => {
   return (
-    <View className={`my-2.5 h-[50px] w-full justify-center rounded-full border border-gray-500 bg-white px-4 ${containerClassName}`}>
+    <View
+      className={`my-2.5 h-[50px] w-full justify-center rounded-full border border-gray-500 bg-white px-4 ${containerClassName}`}>
       <View className="flex-row items-center justify-between">
         <TextInput
-          className={`font-cairo flex-1 text-sm text-black ${inputClassName}`}
+          className={`flex-1 font-cairo text-sm text-black ${inputClassName}`}
           placeholderTextColor="#C2C2C2"
           {...textInputProps}
         />
-        {icon && (
-          <Image
-            source={icon}
-            className="h-6 w-6"
-            resizeMode="contain"
-          />
-        )}
+        {icon && <Image source={icon} className="h-6 w-6" resizeMode="contain" />}
       </View>
     </View>
   );

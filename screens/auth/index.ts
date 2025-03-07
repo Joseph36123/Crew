@@ -1,4 +1,3 @@
-// screens/auth/index.ts
 import Signin from './signin';
 import Signup from './signup';
 import OTPVerification from './phone-verification';

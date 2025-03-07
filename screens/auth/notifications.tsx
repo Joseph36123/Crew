@@ -1,4 +1,3 @@
-// screens/auth/notifications.tsx
 import React, { useEffect } from 'react';
 import {
   View,
@@ -9,18 +8,16 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { AuthStackParamList } from '../../types/types';
-import { CrewButton, Title, Subtitle } from '../../components/atoms';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { useAppDispatch } from '../../store';
+import { setAuthMode } from '../../store/slices/authSlice';
+import { CrewButton, Title, Subtitle } from '../../components/atoms';
 
 const { height } = Dimensions.get('window');
 
-type NotificationsScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Notifications'>;
-
 const NotificationsScreen: React.FC = () => {
-  const navigation = useNavigation<NotificationsScreenNavigationProp>();
+  const dispatch = useAppDispatch();
 
   // Request notifications permission
   const requestNotificationsPermission = async () => {
@@ -53,20 +50,38 @@ const NotificationsScreen: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleContinue = () => {
-    // Navigate to the main app
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'TabNavigator' as any }],
-    });
+  useEffect(() => {
+    return () => {
+      dispatch(setAuthMode(null));
+    };
+  }, [dispatch]);
+
+  const handleContinue = async () => {
+    try {
+      // Save notification preference to AsyncStorage
+      await AsyncStorage.setItem('notificationsSet', 'true');
+      console.log('Notifications preference saved');
+
+      // No need to navigate - root navigator will handle this
+      // based on AsyncStorage values
+    } catch (error) {
+      console.error('Error saving notification preference:', error);
+      Alert.alert('Error', 'Failed to save your preference. Please try again.');
+    }
   };
 
-  const handleSkip = () => {
-    // Navigate to the main app even if notifications are declined
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'TabNavigator' as any }],
-    });
+  const handleSkip = async () => {
+    try {
+      // Still save to AsyncStorage even when skipped
+      await AsyncStorage.setItem('notificationsSet', 'true');
+      console.log('Notifications preference saved (skipped)');
+
+      // No need to navigate - root navigator will handle this
+      // based on AsyncStorage values
+    } catch (error) {
+      console.error('Error saving notification preference:', error);
+      Alert.alert('Error', 'Failed to save your preference. Please try again.');
+    }
   };
 
   return (
@@ -90,10 +105,7 @@ const NotificationsScreen: React.FC = () => {
         <View className="absolute top-[30%] z-20 h-[70%] w-full rounded-t-[40px] bg-white">
           <View className="flex-1 items-center px-5 pb-10 pt-12">
             {/* Title */}
-            <Title 
-              text="Turn on notifications" 
-              containerClassName="mb-4"
-            />
+            <Title text="Turn on notifications" containerClassName="mb-4" />
 
             {/* Subtitle */}
             <Subtitle

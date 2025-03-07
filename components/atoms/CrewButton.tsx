@@ -121,19 +121,19 @@ const CrewButton: React.FC<CrewButtonProps> = ({
     return sizes[size];
   };
 
-  const renderIcon = () => {
-    if (!iconName) return null;
+  // const renderIcon = () => {
+  //   if (!iconName) return null;
 
-    const IconComponent = IconComponents[iconFamily];
-    return (
-      <IconComponent
-        name={iconName}
-        size={getIconSize()}
-        color={getTextColor()}
-        style={text ? (iconPosition === 'left' ? { marginRight: 8 } : { marginLeft: 8 }) : {}}
-      />
-    );
-  };
+  //   const IconComponent = IconComponents[iconFamily];
+  //   return (
+  //     <IconComponent
+  //       name={iconName}
+  //       size={getIconSize()}
+  //       color={getTextColor()}
+  //       style={text ? (iconPosition === 'left' ? { marginRight: 8 } : { marginLeft: 8 }) : {}}
+  //     />
+  //   );
+  // };
 
   const renderContent = () => {
     if (loading) {
@@ -149,13 +149,7 @@ const CrewButton: React.FC<CrewButtonProps> = ({
 
     const buttonText = variant !== 'icon' && text && <Text style={textStyles}>{text}</Text>;
 
-    return (
-      <>
-        {iconPosition === 'left' && renderIcon()}
-        {buttonText}
-        {iconPosition === 'right' && renderIcon()}
-      </>
-    );
+    return <>{buttonText}</>;
   };
 
   return (

@@ -1,4 +1,3 @@
-// screens/auth/signup.tsx
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -7,6 +6,7 @@ import {
   Dimensions,
   TouchableWithoutFeedback,
   Keyboard,
+  Alert,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -18,6 +18,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../types/types';
 import { CrewButton, TextInputField, Title } from '../../components/atoms';
+import { useAppDispatch, useAppSelector } from '../../store';
+import { initiateRegister, setAuthMode } from '../../store/slices/authSlice';
 
 const { height } = Dimensions.get('window');
 
@@ -25,6 +27,9 @@ type NavigationProp = StackNavigationProp<AuthStackParamList, 'Signup'>;
 
 const Signup = () => {
   const navigation = useNavigation<NavigationProp>();
+  const dispatch = useAppDispatch();
+  const { isLoading, error, tempPhoneNumber, otpSent } = useAppSelector((state) => state.auth);
+
   const [phoneNumber, setPhoneNumber] = useState('');
   const [fullName, setFullName] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -44,6 +49,16 @@ const Signup = () => {
     formPosition.value = withDelay(800, withTiming(0, { duration: 800 }));
   }, []);
 
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Registration Error', error);
+    }
+    // if OTP has been sent, navigate to OTP verification screen
+    if (otpSent && tempPhoneNumber) {
+      navigation.navigate('OTPVerification', { phoneNumber: tempPhoneNumber });
+    }
+  }, [error, otpSent, tempPhoneNumber, navigation]);
+
   const logoStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,
     transform: [{ translateY: logoPosition.value }],
@@ -60,23 +75,41 @@ const Signup = () => {
     return digitsOnly.length >= 10;
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     // Validate inputs
     if (!fullName.trim()) {
-      console.log('Please enter your full name');
+      Alert.alert('Invalid Input', 'Please enter your full name');
       return;
     }
 
     if (!validatePhoneNumber(phoneNumber)) {
-      setPhoneError('Please enter a valid US phone number');
+      setPhoneError('Please enter a valid phone number');
       return;
     }
 
     // Clear any previous errors
     setPhoneError('');
-    
-    // Navigate to OTP verification with the phone number
-    navigation.navigate('OTPVerification', { phoneNumber });
+
+    // Setting auth mode
+    dispatch(setAuthMode('register'));
+
+    try {
+      // Dispatch register action
+      await dispatch(
+        initiateRegister({
+          fullName: fullName.trim(),
+          phoneNumber: phoneNumber.trim(),
+        })
+      );
+
+      // Wait a moment for the state to update, then navigate
+      setTimeout(() => {
+        console.log('Registration successful, navigating to OTP verification');
+        navigation.navigate('OTPVerification', { phoneNumber: phoneNumber.trim() });
+      }, 100);
+    } catch (err) {
+      console.error('Failed to register:', err);
+    }
   };
 
   return (
@@ -96,10 +129,7 @@ const Signup = () => {
           style={formStyle}>
           <View className="flex-1 items-center justify-start px-5 pb-10 pt-8">
             {/* Headers */}
-            <Title 
-              text="New to Crew?\nSign Up" 
-              containerClassName="mb-6"            
-            />
+            <Title text="New to Crew?\nSign Up" containerClassName="mb-6" />
 
             {/* Full Name Input */}
             <TextInputField
@@ -118,16 +148,14 @@ const Signup = () => {
                 setPhoneNumber(text);
                 if (phoneError) setPhoneError('');
               }}
-              icon={require('../../assets/images/phone.png')}
+              icon={require('../../assets/images/phone.png')} // rather than images for icons we should use icons instead
             />
-            
+
             {/* Phone Number Error */}
             {phoneError ? (
-              <Text className="font-cairo mt-1 self-start text-xs text-red-500">
-                {phoneError}
-              </Text>
+              <Text className="mt-1 self-start font-cairo text-xs text-red-500">{phoneError}</Text>
             ) : null}
-            
+
             {/* Sign Up Button */}
             <CrewButton
               variant="filled"
@@ -135,13 +163,13 @@ const Signup = () => {
               color="secondary"
               size="large"
               onPress={handleSignup}
-              loading={false}
-              disabled={!fullName.trim() || !phoneNumber.trim()}
+              loading={isLoading}
+              disabled={!fullName.trim() || !phoneNumber.trim() || isLoading}
               className="mt-4"
             />
 
             {/* Bottom Text */}
-            <Text className="font-cairo mt-4 text-center text-sm text-gray-500">
+            <Text className="mt-4 text-center font-cairo text-sm text-gray-500">
               Already have an account?{' '}
               <Text
                 className="font-cairo text-sm font-bold text-gray-500 underline"
