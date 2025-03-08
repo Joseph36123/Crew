@@ -32,14 +32,11 @@ const PhoneVerificationScreen: React.FC = () => {
     (state) => state.auth
   );
 
-  // OTP Input state
   const [otp, setOtp] = useState(['', '', '', '']);
 
-  // Countdown for re-sending code
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
-  // Clear errors on mount
   useEffect(() => {
     dispatch(clearError());
   }, [dispatch]);
@@ -67,9 +64,6 @@ const PhoneVerificationScreen: React.FC = () => {
     if (error) {
       Alert.alert('Verification Error', error);
     }
-
-    // The navigation to the next screen is now handled by the root navigator
-    // based on isAuthenticated and other state values
   }, [error, isAuthenticated, navigation]);
 
   const handleResendCode = async () => {
@@ -81,7 +75,7 @@ const PhoneVerificationScreen: React.FC = () => {
         if (result.meta.requestStatus === 'fulfilled') {
           setCountdown(60);
           setCanResend(false);
-          setOtp(['', '', '', '']); // Clear OTP input on resend
+          setOtp(['', '', '', '']);
           Alert.alert('Success', 'OTP has been resent to your phone.');
         }
       } catch (err) {
@@ -91,7 +85,6 @@ const PhoneVerificationScreen: React.FC = () => {
   };
 
   const handleContinue = async () => {
-    // Validate the OTP
     const fullOtp = otp.join('');
     if (fullOtp.length !== 4) {
       Alert.alert('Invalid OTP', 'Please enter a valid 4-digit OTP');
@@ -101,7 +94,6 @@ const PhoneVerificationScreen: React.FC = () => {
     try {
       console.log('Verifying OTP:', fullOtp, 'for phone:', phoneNumber);
 
-      // Dispatch OTP verification
       const result = await dispatch(verifyOTP({ phoneNumber, otp: fullOtp }));
 
       if (result.meta.requestStatus !== 'fulfilled') {
@@ -111,7 +103,6 @@ const PhoneVerificationScreen: React.FC = () => {
         );
       } else {
         console.log('OTP verification successful');
-        // Navigation is handled by root navigator based on auth state
       }
     } catch (err) {
       console.error('OTP verification error:', err);
