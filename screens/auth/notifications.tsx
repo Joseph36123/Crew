@@ -7,19 +7,27 @@ import {
   Keyboard,
   Platform,
   Alert,
+  BackHandler,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import { useAppDispatch } from '../../store';
-import { setAuthMode } from '../../store/slices/authSlice';
+import { useAppDispatch, useAppSelector } from '../../store';
 import { CrewButton, Title, Subtitle } from '../../components/atoms';
 
 const { height } = Dimensions.get('window');
 
 const NotificationsScreen: React.FC = () => {
   const dispatch = useAppDispatch();
+  const { isProfileComplete } = useAppSelector((state) => state.profile);
 
-  // Request notifications permission
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      return true;
+    });
+
+    return () => backHandler.remove();
+  }, []);
+
   const requestNotificationsPermission = async () => {
     try {
       if (Platform.OS !== 'web') {
@@ -34,15 +42,11 @@ const NotificationsScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    // Show system notification permission dialog
     const showNotificationDialog = async () => {
-      // On iOS, the permission request will show the native iOS notification prompt
-      // On Android, this is handled differently based on the version
       const permission = await requestNotificationsPermission();
       console.log('Notification permission granted:', permission);
     };
 
-    // Delay the notification prompt slightly for better UX
     const timer = setTimeout(() => {
       showNotificationDialog();
     }, 1000);
@@ -50,20 +54,19 @@ const NotificationsScreen: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      dispatch(setAuthMode(null));
-    };
-  }, [dispatch]);
-
   const handleContinue = async () => {
     try {
-      // Save notification preference to AsyncStorage
       await AsyncStorage.setItem('notificationsSet', 'true');
-      console.log('Notifications preference saved');
+      console.log('Notifications preference saved - user allowed notifications');
 
-      // No need to navigate - root navigator will handle this
-      // based on AsyncStorage values
+      Alert.alert('Success', 'Notification preferences saved successfully!', [
+        {
+          text: 'Continue',
+          onPress: async () => {
+            await AsyncStorage.setItem('navigationReady', 'true');
+          },
+        },
+      ]);
     } catch (error) {
       console.error('Error saving notification preference:', error);
       Alert.alert('Error', 'Failed to save your preference. Please try again.');
@@ -72,12 +75,17 @@ const NotificationsScreen: React.FC = () => {
 
   const handleSkip = async () => {
     try {
-      // Still save to AsyncStorage even when skipped
       await AsyncStorage.setItem('notificationsSet', 'true');
       console.log('Notifications preference saved (skipped)');
 
-      // No need to navigate - root navigator will handle this
-      // based on AsyncStorage values
+      Alert.alert('Success', 'Preferences saved successfully!', [
+        {
+          text: 'Continue',
+          onPress: async () => {
+            await AsyncStorage.setItem('navigationReady', 'true');
+          },
+        },
+      ]);
     } catch (error) {
       console.error('Error saving notification preference:', error);
       Alert.alert('Error', 'Failed to save your preference. Please try again.');

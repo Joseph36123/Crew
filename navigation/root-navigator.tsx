@@ -35,10 +35,13 @@ export default function RootNavigator() {
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState<boolean | null>(null);
   const [hasSetNotifications, setHasSetNotifications] = useState<boolean | null>(null);
 
+  // State to track navigation ready status (for transitions between navigators)
+  const [navigationReady, setNavigationReady] = useState(false);
+
   // Reference to track if initial auth check has started
   const checkStartedRef = useRef(false);
 
-  // Effect for mandatory splash screen duration
+  // Effect for mandatory splash screen duration - ONLY ON INITIAL APP LOAD
   useEffect(() => {
     console.log('Starting splash screen timer');
     // Always show splash for minimum duration
@@ -84,30 +87,54 @@ export default function RootNavigator() {
     checkStatus();
   }, [dispatch]);
 
-  // Listen for AsyncStorage changes (for navigation state)
+  // Effect to listen for navigation ready status (set by notification screen)
   useEffect(() => {
-    const checkOnboardingProgress = async () => {
-      if (isAuthenticated) {
+    const checkNavigationReady = async () => {
+      const isReady = await AsyncStorage.getItem('navigationReady');
+      setNavigationReady(isReady === 'true');
+
+      if (isReady === 'true') {
+        // Re-check onboarding status to ensure we have the latest values
         const termsAccepted = await AsyncStorage.getItem('termsAccepted');
         setHasAcceptedTerms(termsAccepted === 'true');
 
         const notificationsSet = await AsyncStorage.getItem('notificationsSet');
         setHasSetNotifications(notificationsSet === 'true');
+
+        // If user is authenticated, check their profile status
+        if (isAuthenticated && userId) {
+          dispatch(checkProfileStatus(userId));
+        }
+
+        // Reset the navigation ready flag so it can be used again if needed
+        await AsyncStorage.removeItem('navigationReady');
+        setNavigationReady(false);
       }
     };
 
-    // Set up interval to periodically check AsyncStorage
-    const intervalId = setInterval(checkOnboardingProgress, 1000);
+    // Set up a polling mechanism to check for navigation ready status
+    const intervalId = setInterval(checkNavigationReady, 500);
 
     return () => clearInterval(intervalId);
-  }, [isAuthenticated]);
+  }, [dispatch, isAuthenticated, userId]);
 
-  // Effect for checking profile status when authenticated and onboarding complete
+  // Effect for updating onboarding status when authentication state changes
   useEffect(() => {
-    if (isAuthenticated && userId && hasAcceptedTerms && hasSetNotifications) {
-      dispatch(checkProfileStatus(userId));
+    if (isAuthenticated && userId) {
+      const checkOnboardingStatus = async () => {
+        const termsAccepted = await AsyncStorage.getItem('termsAccepted');
+        setHasAcceptedTerms(termsAccepted === 'true');
+
+        const notificationsSet = await AsyncStorage.getItem('notificationsSet');
+        setHasSetNotifications(notificationsSet === 'true');
+
+        // Check profile status when auth changes
+        dispatch(checkProfileStatus(userId));
+      };
+
+      checkOnboardingStatus();
     }
-  }, [isAuthenticated, userId, hasAcceptedTerms, hasSetNotifications, dispatch]);
+  }, [isAuthenticated, userId, dispatch]);
 
   console.log('Navigation state:', {
     showSplash,
@@ -117,54 +144,26 @@ export default function RootNavigator() {
     otpSent,
     hasAcceptedTerms,
     hasSetNotifications,
+    navigationReady,
   });
 
-  // Always show splash screen during initial loading or for minimum duration
-  if (showSplash || !initialCheckComplete || authLoading || profileLoading) {
+  // Only show splash screen during initial app load
+  if (showSplash || !initialCheckComplete) {
     console.log('Showing splash screen');
     return <SplashScreen />;
   }
 
-  // Special case: If OTP is sent and user is still in verification process, stay in auth flow
-  if (otpSent && !isAuthenticated) {
-    console.log('OTP sent, keeping auth navigation');
-    return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {!isAuthenticated ? (
         <Stack.Screen name="Auth" component={AuthNavigator} />
-      </Stack.Navigator>
-    );
-  }
-
-  console.log('Determining main navigation flow');
-
-  // Handle the full navigation flow
-  if (!isAuthenticated) {
-    // Not authenticated - show auth flow
-    return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Auth" component={AuthNavigator} />
-      </Stack.Navigator>
-    );
-  } else if (!hasAcceptedTerms || !hasSetNotifications) {
-    // Show onboarding flow if either terms or notifications are not complete
-    return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      ) : !hasAcceptedTerms || !hasSetNotifications ? (
         <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
-      </Stack.Navigator>
-    );
-  } else if (!isProfileComplete) {
-    // Show profile setup if onboarding is complete but profile isn't
-    return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      ) : !isProfileComplete ? (
         <Stack.Screen name="profileSetUp" component={ProfileSetupNavigator} />
-      </Stack.Navigator>
-    );
-  } else {
-    // All steps complete - show main app
-    return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      ) : (
         <Stack.Screen name="TabNavigator" component={TabNavigator} />
-      </Stack.Navigator>
-    );
-  }
+      )}
+    </Stack.Navigator>
+  );
 }

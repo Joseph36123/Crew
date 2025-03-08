@@ -296,7 +296,7 @@ const authSlice = createSlice({
           state.userId = responseData.userId || null;
         }
 
-        // Reset temporary state
+        // Reset temporary state but keep auth mode for flow control
         state.tempPhoneNumber = null;
         state.tempFullName = null;
         state.otpSent = false;

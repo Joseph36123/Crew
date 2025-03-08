@@ -7,13 +7,16 @@ import {
   Keyboard,
   Text,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { CrewButton, OTPInput, Title, Subtitle } from '../../components/atoms';
 import { AuthStackParamList } from '../../types/types';
 import { useAppDispatch, useAppSelector } from '../../store';
-import { verifyOTP, resendOTP } from '../../store/slices/authSlice';
+import { verifyOTP, resendOTP, clearError } from '../../store/slices/authSlice';
 
 const { height } = Dimensions.get('window');
 
@@ -25,7 +28,9 @@ const PhoneVerificationScreen: React.FC = () => {
   const route = useRoute<OTPVerificationRouteProp>();
   const phoneNumber = route.params?.phoneNumber ?? '';
   const dispatch = useAppDispatch();
-  const { isLoading, error, isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isLoading, error, isAuthenticated, currentAuthMode } = useAppSelector(
+    (state) => state.auth
+  );
 
   // OTP Input state
   const [otp, setOtp] = useState(['', '', '', '']);
@@ -33,6 +38,11 @@ const PhoneVerificationScreen: React.FC = () => {
   // Countdown for re-sending code
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
+
+  // Clear errors on mount
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -58,11 +68,8 @@ const PhoneVerificationScreen: React.FC = () => {
       Alert.alert('Verification Error', error);
     }
 
-    if (isAuthenticated) {
-      console.log('User authenticated successfully');
-      // No need to navigate - root navigator will handle this
-      // based on authentication state
-    }
+    // The navigation to the next screen is now handled by the root navigator
+    // based on isAuthenticated and other state values
   }, [error, isAuthenticated, navigation]);
 
   const handleResendCode = async () => {
@@ -74,6 +81,7 @@ const PhoneVerificationScreen: React.FC = () => {
         if (result.meta.requestStatus === 'fulfilled') {
           setCountdown(60);
           setCanResend(false);
+          setOtp(['', '', '', '']); // Clear OTP input on resend
           Alert.alert('Success', 'OTP has been resent to your phone.');
         }
       } catch (err) {
@@ -103,7 +111,7 @@ const PhoneVerificationScreen: React.FC = () => {
         );
       } else {
         console.log('OTP verification successful');
-        // Navigation is handled by root navigator
+        // Navigation is handled by root navigator based on auth state
       }
     } catch (err) {
       console.error('OTP verification error:', err);
@@ -113,73 +121,91 @@ const PhoneVerificationScreen: React.FC = () => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View className="flex-1 bg-[#191919]">
-        {/* Crew Logo: Fixed position, no animation */}
-        <Image
-          source={require('../../assets/images/logo.png')}
-          style={{
-            position: 'absolute',
-            alignSelf: 'center',
-            width: 400,
-            height: 400,
-            top: height * -0.085,
-            zIndex: 1,
-          }}
-          resizeMode="contain"
-        />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}>
+        <View className="flex-1 bg-[#191919]">
+          {/* Crew Logo: Fixed position, no animation */}
+          <Image
+            source={require('../../assets/images/logo.png')}
+            style={{
+              position: 'absolute',
+              alignSelf: 'center',
+              width: 400,
+              height: 400,
+              top: height * -0.085,
+              zIndex: 1,
+            }}
+            resizeMode="contain"
+          />
 
-        {/* Bottom Portion: Static View */}
-        <View className="absolute top-[30%] z-20 h-[70%] w-full rounded-t-[40px] bg-white">
-          <View className="flex-1 items-center px-5 pb-10 pt-8">
-            {/* Title Text */}
-            <Title text="Enter 4 digit code we have sent you on" containerClassName="mb-2" />
+          {/* Bottom Portion: Static View */}
+          <View className="absolute top-[27%] z-20 h-[73%] w-full rounded-t-[40px] bg-white">
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1 }}
+              className="flex-1"
+              showsVerticalScrollIndicator={false}>
+              <View className="flex-1 items-center px-5 pb-10 pt-10">
+                {/* Title Text */}
+                <Title text="Enter 4 digit code we have sent you on" containerClassName="mb-4" />
 
-            {/* Phone Number Text */}
-            {phoneNumber ? (
-              <Subtitle text={phoneNumber} containerClassName="mb-6" textClassName="text-xl" />
-            ) : null}
+                {/* Phone Number Text */}
+                {phoneNumber ? (
+                  <Subtitle
+                    text={phoneNumber}
+                    containerClassName="mb-8"
+                    textClassName="text-xl font-bold"
+                  />
+                ) : null}
 
-            {/* OTP Input Boxes */}
-            <OTPInput
-              length={4}
-              value={otp}
-              onChange={setOtp}
-              containerClassName="mb-3 space-x-8"
-              inputClassName="h-20 w-20 text-3xl"
-            />
+                {/* OTP Input Boxes */}
+                <View className="w-full items-center justify-center py-4">
+                  <OTPInput
+                    length={4}
+                    value={otp}
+                    onChange={setOtp}
+                    containerClassName="mb-6 space-x-4"
+                    inputClassName="h-20 w-20 text-3xl"
+                  />
+                </View>
 
-            {/* Code Expiration Text */}
-            <Text className="mb-6 font-cairo text-sm text-gray-500">Code expires in 2 minutes</Text>
-
-            {/* Continue Button using CrewButton component */}
-            <CrewButton
-              variant="filled"
-              text="Continue"
-              color="secondary"
-              size="large"
-              fullWidth={true}
-              onPress={handleContinue}
-              disabled={otp.join('').length !== 4 || isLoading}
-              loading={isLoading}
-            />
-
-            {/* Resend Text */}
-            <View className="mt-5">
-              {canResend ? (
-                <Text
-                  onPress={handleResendCode}
-                  className="text-center font-cairo text-sm font-bold text-gray-500 underline">
-                  Didn&apos;t receive a code? Send again
+                {/* Code Expiration Text */}
+                <Text className="mb-8 font-cairo text-sm text-gray-500">
+                  Code expires in 2 minutes
                 </Text>
-              ) : (
-                <Text className="text-center font-cairo text-sm text-gray-500">
-                  Didn&apos;t receive a code? Send again in {countdown} seconds.
-                </Text>
-              )}
-            </View>
+
+                {/* Continue Button using CrewButton component */}
+                <CrewButton
+                  variant="filled"
+                  text="Continue"
+                  color="secondary"
+                  size="large"
+                  fullWidth={true}
+                  onPress={handleContinue}
+                  disabled={otp.join('').length !== 4 || isLoading}
+                  loading={isLoading}
+                  className="mt-4"
+                />
+
+                {/* Resend Text */}
+                <View className="mt-8">
+                  {canResend ? (
+                    <Text
+                      onPress={handleResendCode}
+                      className="text-center font-cairo text-sm font-bold text-gray-500 underline">
+                      Didn&apos;t receive a code? Send again
+                    </Text>
+                  ) : (
+                    <Text className="text-center font-cairo text-sm text-gray-500">
+                      Didn&apos;t receive a code? Send again in {countdown} seconds.
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </ScrollView>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
 };

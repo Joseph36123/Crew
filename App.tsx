@@ -1,4 +1,3 @@
-// App.tsx
 import './global.css';
 
 import 'react-native-gesture-handler';

@@ -1,10 +1,10 @@
 export type RootStackParamList = {
-  Splash: undefined;
+  TabNavigator: undefined;
+  Modal: undefined;
   Auth: undefined;
   Onboarding: undefined;
-  TabNavigator: undefined;
   profileSetUp: undefined;
-  Modal: undefined;
+  Main: undefined;
 };
 
 export type AuthStackParamList = {

@@ -6,7 +6,6 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { OnboardingStackParamList } from '../../navigation/onboarding-navigator';
 import { CrewButton, Checkbox, Title, Subtitle } from '../../components/atoms';
 import { useAppDispatch, useAppSelector } from '../../store';
-import { resetAuthState } from '../../store/slices/authSlice';
 
 const { height } = Dimensions.get('window');
 

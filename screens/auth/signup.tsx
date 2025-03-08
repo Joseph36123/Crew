@@ -7,6 +7,9 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -19,7 +22,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../types/types';
 import { CrewButton, TextInputField, Title } from '../../components/atoms';
 import { useAppDispatch, useAppSelector } from '../../store';
-import { initiateRegister, setAuthMode } from '../../store/slices/authSlice';
+import { initiateRegister, setAuthMode, clearError } from '../../store/slices/authSlice';
 
 const { height } = Dimensions.get('window');
 
@@ -41,6 +44,9 @@ const Signup = () => {
   const formPosition = useSharedValue(height * 0.3);
 
   useEffect(() => {
+    // Clear any errors when component mounts
+    dispatch(clearError());
+
     // Delayed entrance animations
     logoOpacity.value = withDelay(300, withTiming(1, { duration: 500 }));
     logoPosition.value = withDelay(300, withTiming(0, { duration: 800 }));
@@ -89,6 +95,7 @@ const Signup = () => {
 
     // Clear any previous errors
     setPhoneError('');
+    dispatch(clearError());
 
     // Setting auth mode
     dispatch(setAuthMode('register'));
@@ -102,11 +109,7 @@ const Signup = () => {
         })
       );
 
-      // Wait a moment for the state to update, then navigate
-      setTimeout(() => {
-        console.log('Registration successful, navigating to OTP verification');
-        navigation.navigate('OTPVerification', { phoneNumber: phoneNumber.trim() });
-      }, 100);
+      // Navigation is handled by the useEffect that watches otpSent
     } catch (err) {
       console.error('Failed to register:', err);
     }
@@ -114,72 +117,86 @@ const Signup = () => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View className="flex-1 bg-[#191919]">
-        {/* Logo Image */}
-        <Animated.Image
-          source={require('../../assets/images/logo.png')}
-          className="absolute -top-[8.5%] z-10 h-[400px] w-[400px] self-center"
-          style={logoStyle}
-          resizeMode="contain"
-        />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}>
+        <View className="flex-1 bg-[#191919]">
+          {/* Logo Image */}
+          <Animated.Image
+            source={require('../../assets/images/logo.png')}
+            className="absolute -top-[8.5%] z-10 h-[400px] w-[400px] self-center"
+            style={logoStyle}
+            resizeMode="contain"
+          />
 
-        {/* Signup Form Container */}
-        <Animated.View
-          className="absolute top-[30%] z-20 h-[70%] w-full rounded-t-[40px] bg-white"
-          style={formStyle}>
-          <View className="flex-1 items-center justify-start px-5 pb-10 pt-8">
-            {/* Headers */}
-            <Title text="New to Crew?\nSign Up" containerClassName="mb-6" />
+          {/* Signup Form Container */}
+          <Animated.View
+            className="absolute top-[27%] z-20 h-[73%] w-full rounded-t-[40px] bg-white"
+            style={formStyle}>
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1 }}
+              className="flex-1"
+              showsVerticalScrollIndicator={false}>
+              <View className="flex-1 items-center justify-start px-5 pb-10 pt-10">
+                {/* Headers */}
+                <Title text="New to Crew?\nSign Up" containerClassName="mb-8" />
 
-            {/* Full Name Input */}
-            <TextInputField
-              placeholder="Full Name"
-              value={fullName}
-              onChangeText={setFullName}
-              icon={require('../../assets/images/contact.png')}
-            />
+                {/* Full Name Input */}
+                <TextInputField
+                  placeholder="Full Name"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  icon={require('../../assets/images/contact.png')}
+                  containerClassName="mb-4"
+                />
 
-            {/* Phone Number Input */}
-            <TextInputField
-              placeholder="Phone Number"
-              keyboardType="phone-pad"
-              value={phoneNumber}
-              onChangeText={(text) => {
-                setPhoneNumber(text);
-                if (phoneError) setPhoneError('');
-              }}
-              icon={require('../../assets/images/phone.png')} // rather than images for icons we should use icons instead
-            />
+                {/* Phone Number Input */}
+                <TextInputField
+                  placeholder="Phone Number"
+                  keyboardType="phone-pad"
+                  value={phoneNumber}
+                  onChangeText={(text) => {
+                    setPhoneNumber(text);
+                    if (phoneError) setPhoneError('');
+                  }}
+                  icon={require('../../assets/images/phone.png')}
+                />
 
-            {/* Phone Number Error */}
-            {phoneError ? (
-              <Text className="mt-1 self-start font-cairo text-xs text-red-500">{phoneError}</Text>
-            ) : null}
+                {/* Phone Number Error */}
+                {phoneError ? (
+                  <Text className="mt-1 self-start font-cairo text-xs text-red-500">
+                    {phoneError}
+                  </Text>
+                ) : null}
 
-            {/* Sign Up Button */}
-            <CrewButton
-              variant="filled"
-              text="Sign up"
-              color="secondary"
-              size="large"
-              onPress={handleSignup}
-              loading={isLoading}
-              disabled={!fullName.trim() || !phoneNumber.trim() || isLoading}
-              className="mt-4"
-            />
+                {/* Sign Up Button */}
+                <CrewButton
+                  variant="filled"
+                  text="Sign up"
+                  color="secondary"
+                  size="large"
+                  onPress={handleSignup}
+                  loading={isLoading}
+                  disabled={!fullName.trim() || !phoneNumber.trim() || isLoading}
+                  className="mt-8"
+                />
 
-            {/* Bottom Text */}
-            <Text className="mt-4 text-center font-cairo text-sm text-gray-500">
-              Already have an account?{' '}
-              <Text
-                className="font-cairo text-sm font-bold text-gray-500 underline"
-                onPress={() => navigation.navigate('Signin')}>
-                Sign in.
-              </Text>
-            </Text>
-          </View>
-        </Animated.View>
-      </View>
+                {/* Bottom Text */}
+                <View className="mb-4 mt-2 flex-row items-center justify-center">
+                  <Text className="pt-4 font-cairo text-sm text-gray-500">
+                    Already have an account?{' '}
+                    <Text
+                      className="font-cairo text-sm font-bold text-primary-dark underline "
+                      onPress={() => navigation.navigate('Signin')}>
+                      Sign In.
+                    </Text>
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
 };

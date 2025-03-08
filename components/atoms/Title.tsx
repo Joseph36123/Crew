@@ -1,6 +1,5 @@
-// components/atoms/Title.tsx
 import React from 'react';
-import { Text, TextProps, View } from 'react-native';
+import { Text, TextProps, View, StyleSheet, Platform } from 'react-native';
 
 interface TitleProps extends TextProps {
   text: string;
@@ -16,7 +15,6 @@ const Title: React.FC<TitleProps> = ({
   textClassName = '',
   ...textProps
 }) => {
-  // Handle both literal "\n" strings and actual newline characters
   const processedText = text.replace(/\\n/g, '\n');
   const textLines = processedText.split('\n');
 
@@ -28,13 +26,30 @@ const Title: React.FC<TitleProps> = ({
           className={`font-cairo text-4xl font-bold text-[#0D0F0F] ${
             align === 'center' ? 'text-center' : align === 'left' ? 'text-left' : 'text-right'
           } ${textClassName}`}
-          {...textProps}
-        >
+          style={styles.text}
+          {...textProps}>
           {line}
         </Text>
       ))}
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  text: {
+    lineHeight: Platform.OS === 'ios' ? 40 : 42,
+    includeFontPadding: false,
+    ...Platform.select({
+      ios: {
+        paddingTop: 1,
+        paddingBottom: 1,
+      },
+      android: {
+        paddingTop: 2,
+        paddingBottom: 1,
+      },
+    }),
+  },
+});
 
 export default Title;

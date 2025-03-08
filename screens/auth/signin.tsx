@@ -1,18 +1,25 @@
-// screens/auth/signin.tsx
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
-  Image,
   Dimensions,
   TouchableWithoutFeedback,
   Keyboard,
+  Text,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+} from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../types/types';
-import { CrewButton, TextInputField, GoBackButton } from '../../components/atoms';
+import { CrewButton, TextInputField, GoBackButton, Title } from '../../components/atoms';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { initiateLogin, setAuthMode, clearError } from '../../store/slices/authSlice';
 
@@ -26,11 +33,31 @@ const Signin: React.FC = () => {
   const { isLoading, error, tempPhoneNumber, otpSent } = useAppSelector((state) => state.auth);
 
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [canGoBack, setCanGoBack] = useState(false);
 
-  // Clear any errors when component mounts
+  // Animation values
+  const logoOpacity = useSharedValue(0);
+  const logoPosition = useSharedValue(-100);
+  const formOpacity = useSharedValue(0);
+  const formPosition = useSharedValue(height * 0.3);
+
+  // Check if we can go back
+  useEffect(() => {
+    // @ts-ignore - canGoBack exists but may not be in the type definitions
+    setCanGoBack(navigation.canGoBack?.() || false);
+  }, [navigation]);
+
+  // Clear any errors when component mounts and setup animations
   useEffect(() => {
     dispatch(clearError());
-  }, [dispatch]);
+
+    // Delayed entrance animations
+    logoOpacity.value = withDelay(300, withTiming(1, { duration: 500 }));
+    logoPosition.value = withDelay(300, withTiming(0, { duration: 800 }));
+
+    formOpacity.value = withDelay(800, withTiming(1, { duration: 500 }));
+    formPosition.value = withDelay(800, withTiming(0, { duration: 800 }));
+  }, [dispatch, logoOpacity, logoPosition, formOpacity, formPosition]);
 
   useEffect(() => {
     // Show error if present
@@ -44,6 +71,16 @@ const Signin: React.FC = () => {
       navigation.navigate('OTPVerification', { phoneNumber: tempPhoneNumber });
     }
   }, [error, otpSent, tempPhoneNumber, navigation]);
+
+  const logoStyle = useAnimatedStyle(() => ({
+    opacity: logoOpacity.value,
+    transform: [{ translateY: logoPosition.value }],
+  }));
+
+  const formStyle = useAnimatedStyle(() => ({
+    opacity: formOpacity.value,
+    transform: [{ translateY: formPosition.value }],
+  }));
 
   const validatePhoneNumber = () => {
     // Make sure the phone entered is only numbers not letters
@@ -73,68 +110,91 @@ const Signin: React.FC = () => {
       // Dispatch action to send OTP
       await dispatch(initiateLogin(formattedPhone));
 
-      // Wait a moment for the state to update
-      setTimeout(() => {
-        console.log('Login successful, navigating to OTP verification');
-        navigation.navigate('OTPVerification', { phoneNumber: formattedPhone });
-      }, 100);
+      // Navigation is handled by the useEffect that watches otpSent
     } catch (err) {
       console.error('Failed to initiate login:', err);
       Alert.alert('Login Error', 'An unexpected error occurred. Please try again.');
     }
   };
 
+  // Safe back navigation
+  const handleGoBack = () => {
+    if (canGoBack) {
+      navigation.goBack();
+    } else {
+      console.log('No screen to go back to');
+    }
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View className="flex-1 bg-[#191919]">
-        {/* Crew Logo */}
-        <Image
-          source={require('../../assets/images/logo.png')}
-          style={{
-            position: 'absolute',
-            alignSelf: 'center',
-            width: 400,
-            height: 400,
-            top: height * -0.085,
-            zIndex: 1,
-          }}
-          resizeMode="contain"
-        />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}>
+        <View className="flex-1 bg-[#191919]">
+          {/* Animated Crew Logo */}
+          <Animated.Image
+            source={require('../../assets/images/logo.png')}
+            className="absolute -top-[8.5%] z-10 h-[400px] w-[400px] self-center"
+            style={logoStyle}
+            resizeMode="contain"
+          />
 
-        {/* White Container */}
-        <View className="absolute top-[30%] z-20 h-[70%] w-full rounded-t-[40px] bg-white">
-          <View className="flex-1 px-5 pb-10 pt-8">
-            {/* Go Back Button - Top Right */}
-            <View className="absolute right-5 top-4 z-10">
-              <GoBackButton onPress={() => navigation.goBack()} />
-            </View>
+          {/* White Container with Animation */}
+          <Animated.View
+            className="absolute top-[27%] z-20 h-[73%] w-full rounded-t-[40px] bg-white"
+            style={formStyle}>
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1 }}
+              className="flex-1"
+              showsVerticalScrollIndicator={false}>
+              <View className="flex-1 px-5 pb-10 pt-10">
+                {/* Go Back Button - Top Right - Only show if we can go back */}
+                {canGoBack && (
+                  <View className="absolute right-5 top-4 z-10">
+                    <GoBackButton onPress={handleGoBack} />
+                  </View>
+                )}
 
-            {/* Sign In Title - Left Aligned */}
-            <Text className="mb-8 mt-10 font-cairo text-4xl font-bold text-[#0D0F0F]">Sign in</Text>
+                {/* Sign In Title - Left Aligned using Title component */}
+                <Title text="Sign in" align="left" containerClassName="mb-8" />
 
-            {/* Phone Number Input */}
-            <TextInputField
-              placeholder="Phone Number"
-              keyboardType="phone-pad"
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-              icon={require('../../assets/images/phone.png')}
-            />
+                {/* Phone Number Input */}
+                <TextInputField
+                  placeholder="Phone Number"
+                  keyboardType="phone-pad"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  icon={require('../../assets/images/phone.png')}
+                  containerClassName="mt-4"
+                />
 
-            {/* Send Code Button */}
-            <CrewButton
-              variant="filled"
-              text="Send Code"
-              color="secondary"
-              size="large"
-              onPress={handleSendCode}
-              loading={isLoading}
-              disabled={!validatePhoneNumber() || isLoading}
-              className="mt-6"
-            />
-          </View>
+                {/* Send Code Button */}
+                <CrewButton
+                  variant="filled"
+                  text="Send Code"
+                  color="secondary"
+                  size="large"
+                  onPress={handleSendCode}
+                  loading={isLoading}
+                  disabled={!validatePhoneNumber() || isLoading}
+                  className="mt-8"
+                />
+                <View className="mb-4 mt-2 flex-row items-center justify-center">
+                  <Text className="pt-4 font-cairo text-sm text-gray-500">
+                    Don't have an account?{' '}
+                    <Text
+                      className="font-cairo text-sm font-bold text-primary-dark underline "
+                      onPress={() => navigation.navigate('Signup')}>
+                      Sign up.
+                    </Text>
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          </Animated.View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
 };
