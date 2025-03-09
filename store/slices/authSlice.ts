@@ -36,7 +36,6 @@ export const initiateLogin = createAsyncThunk(
       return {
         data: response,
         phoneNumber: formattedPhone,
-        // Add explicit success flag based on response
         success: response && response.data.success !== undefined ? response.data.success : true,
       };
     } catch (error) {
@@ -122,18 +121,15 @@ export const resendOTP = createAsyncThunk(
   'auth/resendOTP',
   async (phoneNumber: string, { rejectWithValue }) => {
     try {
-      // Format the phone number properly
       const formattedPhone = formatPhoneNumber(phoneNumber);
       console.log('Using formatted phone for resend OTP:', formattedPhone);
 
       // Get the response
       const response = await authService.resendOTP(formattedPhone);
-
-      // Return with explicit success flag
+      console.log('Resend OTP API response:', response);
       return {
         data: response,
-        // Add explicit success flag based on response
-        success: response && response.data.success !== undefined ? response.data.success : true,
+        success: response?.data?.success || (response?.data && response.data.success) || true,
       };
     } catch (error) {
       console.error('Resend OTP error:', error);

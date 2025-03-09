@@ -28,3 +28,12 @@ export type ProfileSetupStackParamList = {
   // ProfilePreferences: undefined;
   // ProfileAvatar: undefined;
 };
+
+export interface PhoneInputFieldProps {
+  value: string;
+  onChangeText: (text: string, formattedText: string) => void;
+  onValidChange?: (isValid: boolean) => void;
+  containerClassName?: string;
+  placeholder?: string;
+  defaultCode?: string;
+}

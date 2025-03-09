@@ -19,7 +19,8 @@ import Animated, {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../types/types';
-import { CrewButton, TextInputField, GoBackButton, Title } from '../../components/atoms';
+import { CrewButton, GoBackButton, Title } from '../../components/atoms';
+import PhoneInputField from '../../components/atoms/PhoneInputField';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { initiateLogin, setAuthMode, clearError } from '../../store/slices/authSlice';
 
@@ -33,25 +34,21 @@ const Signin: React.FC = () => {
   const { isLoading, error, tempPhoneNumber, otpSent } = useAppSelector((state) => state.auth);
 
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [formattedPhoneNumber, setFormattedPhoneNumber] = useState('');
+  const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
+  const [loginAttempted, setLoginAttempted] = useState(false);
 
-  // Animation values
   const logoOpacity = useSharedValue(0);
   const logoPosition = useSharedValue(-100);
   const formOpacity = useSharedValue(0);
   const formPosition = useSharedValue(height * 0.3);
 
-  // Check if we can go back
   useEffect(() => {
-    // @ts-ignore - canGoBack exists but may not be in the type definitions
     setCanGoBack(navigation.canGoBack?.() || false);
   }, [navigation]);
-
-  // Clear any errors when component mounts and setup animations
   useEffect(() => {
     dispatch(clearError());
-
-    // Delayed entrance animations
     logoOpacity.value = withDelay(300, withTiming(1, { duration: 500 }));
     logoPosition.value = withDelay(300, withTiming(0, { duration: 800 }));
 
@@ -60,17 +57,16 @@ const Signin: React.FC = () => {
   }, [dispatch, logoOpacity, logoPosition, formOpacity, formPosition]);
 
   useEffect(() => {
-    // Show error if present
-    if (error) {
-      Alert.alert('Login Error', error);
+    if (error && loginAttempted) {
+      Alert.alert('Login Error', error || 'There was a problem signing in. Please try again.');
+      setLoginAttempted(false);
     }
 
-    // Navigate to OTP verification if OTP was sent successfully
-    if (otpSent && tempPhoneNumber) {
+    if (otpSent && tempPhoneNumber && !error) {
       console.log('OTP sent, navigating to verification with phone:', tempPhoneNumber);
       navigation.navigate('OTPVerification', { phoneNumber: tempPhoneNumber });
     }
-  }, [error, otpSent, tempPhoneNumber, navigation]);
+  }, [error, otpSent, tempPhoneNumber, navigation, loginAttempted]);
 
   const logoStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,
@@ -82,42 +78,35 @@ const Signin: React.FC = () => {
     transform: [{ translateY: formPosition.value }],
   }));
 
-  const validatePhoneNumber = () => {
-    // Make sure the phone entered is only numbers not letters
-    const phoneRegex = /^[0-9]+$/;
-    return phoneRegex.test(phoneNumber) && phoneNumber.length >= 9;
+  const handlePhoneChange = (text: string, formatted: string) => {
+    setPhoneNumber(text);
+    setFormattedPhoneNumber(formatted);
   };
 
   const handleSendCode = async () => {
-    // Check if phone number is valid
-    if (!validatePhoneNumber()) {
+    if (!isPhoneValid || !formattedPhoneNumber) {
       Alert.alert('Invalid Phone Number', 'Please enter a valid phone number');
       return;
     }
-
-    // Clear any previous errors
     dispatch(clearError());
-
-    // Set auth mode explicitly
     dispatch(setAuthMode('login'));
+    setLoginAttempted(true);
 
     try {
-      console.log('Initiating login for phone number:', phoneNumber);
-
-      // Format phone number (add country code if needed)
-      const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : phoneNumber;
-
-      // Dispatch action to send OTP
-      await dispatch(initiateLogin(formattedPhone));
-
-      // Navigation is handled by the useEffect that watches otpSent
+      console.log('Initiating login for phone number:', formattedPhoneNumber);
+      const result = await dispatch(initiateLogin(formattedPhoneNumber));
+      if (result.meta.requestStatus === 'rejected') {
+        console.error('Login failed:', result.payload);
+      } else {
+        console.log('Login process started, waiting for OTP verification');
+      }
     } catch (err) {
       console.error('Failed to initiate login:', err);
-      Alert.alert('Login Error', 'An unexpected error occurred. Please try again.');
+      Alert.alert('Login Error', 'An unexpected error occurred. Please try again later.');
+      setLoginAttempted(false);
     }
   };
 
-  // Safe back navigation
   const handleGoBack = () => {
     if (canGoBack) {
       navigation.goBack();
@@ -132,7 +121,6 @@ const Signin: React.FC = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}>
         <View className="flex-1 bg-[#191919]">
-          {/* Animated Crew Logo */}
           <Animated.Image
             source={require('../../assets/images/logo.png')}
             className="absolute -top-[8.5%] z-10 h-[400px] w-[400px] self-center"
@@ -140,7 +128,6 @@ const Signin: React.FC = () => {
             resizeMode="contain"
           />
 
-          {/* White Container with Animation */}
           <Animated.View
             className="absolute top-[27%] z-20 h-[73%] w-full rounded-t-[40px] bg-white"
             style={formStyle}>
@@ -149,27 +136,19 @@ const Signin: React.FC = () => {
               className="flex-1"
               showsVerticalScrollIndicator={false}>
               <View className="flex-1 px-5 pb-10 pt-10">
-                {/* Go Back Button - Top Right - Only show if we can go back */}
                 {canGoBack && (
                   <View className="absolute right-5 top-4 z-10">
                     <GoBackButton onPress={handleGoBack} />
                   </View>
                 )}
-
-                {/* Sign In Title - Left Aligned using Title component */}
                 <Title text="Sign in" align="left" containerClassName="mb-8" />
-
-                {/* Phone Number Input */}
-                <TextInputField
-                  placeholder="Phone Number"
-                  keyboardType="phone-pad"
+                <PhoneInputField
                   value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  icon={require('../../assets/images/phone.png')}
+                  onChangeText={handlePhoneChange}
+                  onValidChange={setIsPhoneValid}
+                  placeholder="Phone Number"
                   containerClassName="mt-4"
                 />
-
-                {/* Send Code Button */}
                 <CrewButton
                   variant="filled"
                   text="Send Code"
@@ -177,7 +156,7 @@ const Signin: React.FC = () => {
                   size="large"
                   onPress={handleSendCode}
                   loading={isLoading}
-                  disabled={!validatePhoneNumber() || isLoading}
+                  disabled={!isPhoneValid || isLoading}
                   className="mt-8"
                 />
                 <View className="mb-4 mt-2 flex-row items-center justify-center">

@@ -138,15 +138,15 @@ export const authService = {
 
 export const profileService = {
   getProfileStatus: async (userId: string) => {
-    return api.get(`/profile/${userId}/status`);
+    return api.get(`/user/profile/${userId}/status`);
   },
 
   getUserProfile: async (userId: string) => {
-    return api.get(`/profile/${userId}`);
+    return api.get(`/user/profile/${userId}`);
   },
 
   completeProfile: async (userId: string, profileData: FormData) => {
-    return api.patch(`/profile/${userId}/complete`, profileData, {
+    return api.patch(`/user/profile/${userId}/complete`, profileData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
