@@ -23,13 +23,28 @@ export const initialState: AuthState = {
 };
 
 // Define interface for profile data
+export interface ILocation {
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+}
 export interface ProfileData {
   fullName: string;
   phoneNumber: string;
   avatar?: string;
   bio?: string;
-  preferences?: any;
-  // Add other profile fields as needed
+  vibes?: string[];
+  hobbies?: string[];
+  scenes?: string[];
+  culture?: string;
+  profileCompleted: boolean;
+  school?: string;
+  occupation?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  location?: ILocation;
 }
 
 // Define the profile state

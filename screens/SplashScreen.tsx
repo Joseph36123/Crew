@@ -11,12 +11,12 @@ export default function SplashScreen() {
 
   useEffect(() => {
     // Scale animation
-    scale.value = withTiming(1.2, { duration: 1000 });
+    scale.value = withTiming(1.2, { duration: 1500 });
 
     // Fade out animation
     setTimeout(() => {
-      gifOpacity.value = withTiming(0, { duration: 500 });
-    }, 2500);
+      gifOpacity.value = withTiming(0, { duration: 1000 });
+    }, 3500);
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({

@@ -138,19 +138,43 @@ export const authService = {
 
 export const profileService = {
   getProfileStatus: async (userId: string) => {
-    return api.get(`/user/profile/${userId}/status`);
+    console.log('Calling getProfileStatus API with user ID:', userId);
+    try {
+      const response = await api.get(`/user/profile/${userId}/status`);
+      console.log('GetProfileStatus API response:', response);
+      return response;
+    } catch (error) {
+      console.log('GetProfileStatus API error caught in service:', error);
+      throw error;
+    }
   },
 
   getUserProfile: async (userId: string) => {
-    return api.get(`/user/profile/${userId}`);
+    console.log('Calling getUserProfile API with user ID:', userId);
+    try {
+      const response = await api.get(`/user/profile/${userId}`);
+      console.log('GetUserProfile API response:', response);
+      return response;
+    } catch (error) {
+      console.log('GetUserProfile API error caught in service:', error);
+      throw error;
+    }
   },
 
   completeProfile: async (userId: string, profileData: FormData) => {
-    return api.patch(`/user/profile/${userId}/complete`, profileData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    console.log('Calling completeProfile API with user ID:', userId);
+    try {
+      const response = await api.put(`/user/profile/${userId}`, profileData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log('CompleteProfile API response:', response);
+      return response;
+    } catch (error) {
+      console.log('CompleteProfile API error caught in service:', error);
+      throw error;
+    }
   },
 };
 

@@ -13,7 +13,7 @@ import { checkProfileStatus } from '../store/slices/profileSlice';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-const SPLASH_DURATION = 2000;
+const SPLASH_DURATION = 3500;
 
 export default function RootNavigator() {
   const dispatch = useAppDispatch();
