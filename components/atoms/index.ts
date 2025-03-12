@@ -6,6 +6,8 @@ import OTPInput from './OTPInput';
 import Title from './Title';
 import Subtitle from './Subtitle';
 import GoBackButton from './GoBackButton';
+import InfoContainer from './InfoContainer';
+import GenderButton from './GenderButton';
 
 export { 
   CrewButton, 
@@ -14,5 +16,7 @@ export {
   OTPInput, 
   Title, 
   Subtitle, 
-  GoBackButton 
+  GoBackButton,
+  InfoContainer,
+  GenderButton
 };
