@@ -4,12 +4,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // API base URLs for different environments
 const API_URLS = {
   development: 'http://192.168.1.94:5000/api/v1',
-
-  emulator: 'http://10.0.2.2:5000/api/v1/', // Special IP for Android emulator to reach host
-  production: 'https://api.yourproductionurl.com/api/v1',
+  production: 'https://crew-social-api-staging.onrender.com/api/v1',
+  emulator: 'http://10.0.2.2:5000/api/v1/',
 };
 
-const BASE_URL = API_URLS.development;
+const BASE_URL = API_URLS.production;
 
 console.log('API is configured with base URL:', BASE_URL);
 
