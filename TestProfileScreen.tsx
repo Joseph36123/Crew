@@ -3,11 +3,12 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ProfileBasicInfo from './screens/profile/ProfileBasicInfo';
+import ProfilePhoto from './screens/profile/ProfilePhoto';
 
 const Stack = createStackNavigator();
 
 /**
- * This is a testing component that allows you to directly run the Profile Setup screen
+ * This is a testing component that allows you to directly run the Profile Setup screens
  * without going through the authentication flow.
  * 
  * To use this component:
@@ -29,6 +30,7 @@ const TestProfileScreen = () => {
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="ProfileBasicInfo" component={ProfileBasicInfo} />
+          <Stack.Screen name="ProfilePhoto" component={ProfilePhoto} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

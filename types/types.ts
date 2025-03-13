@@ -25,6 +25,7 @@ export type OnboardingStackParamList = {
 export type ProfileSetupStackParamList = {
   ProfileSetupPlaceholder: undefined;
   ProfileBasicInfo: undefined;
+  ProfilePhoto: undefined;
   // Add other profile setup screens as needed:
   // ProfilePreferences: undefined;
   // ProfileAvatar: undefined;
