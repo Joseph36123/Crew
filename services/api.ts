@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // API base URLs for different environments
 const API_URLS = {
-  development: 'http://192.168.1.94:5000/api/v1',
+ 
   production: 'https://crew-social-api-staging.onrender.com/api/v1',
   emulator: 'http://10.0.2.2:5000/api/v1/',
 };
