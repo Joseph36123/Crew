@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  Image,
   Dimensions,
   TouchableWithoutFeedback,
   Keyboard,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -17,7 +19,7 @@ import Animated, {
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../types/types';
-import { CrewButton, TextInputField, Title } from '../../components/atoms';
+import { CrewButton, TextInputField, Title, GoBackButton } from '../../components/atoms';
 import PhoneInputField from '../../components/atoms/PhoneInputField';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { initiateRegister, setAuthMode, clearError } from '../../store/slices/authSlice';
@@ -36,12 +38,17 @@ const Signup = () => {
   const [fullName, setFullName] = useState('');
   const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [registrationAttempted, setRegistrationAttempted] = useState(false);
+  const [canGoBack, setCanGoBack] = useState(false);
 
   // Animation values
   const logoOpacity = useSharedValue(0);
   const logoPosition = useSharedValue(-100);
   const formOpacity = useSharedValue(0);
   const formPosition = useSharedValue(height * 0.3);
+
+  useEffect(() => {
+    setCanGoBack(navigation.canGoBack?.() || false);
+  }, [navigation]);
 
   useEffect(() => {
     // Clear any previous errors when component mounts
@@ -53,7 +60,7 @@ const Signup = () => {
 
     formOpacity.value = withDelay(800, withTiming(1, { duration: 500 }));
     formPosition.value = withDelay(800, withTiming(0, { duration: 800 }));
-  }, []);
+  }, [dispatch, logoOpacity, logoPosition, formOpacity, formPosition]);
 
   useEffect(() => {
     // Show error if present and registration was attempted
@@ -126,65 +133,93 @@ const Signup = () => {
     }
   };
 
+  const handleGoBack = () => {
+    if (canGoBack) {
+      navigation.goBack();
+    } else {
+      console.log('No screen to go back to');
+    }
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View className="flex-1 bg-[#191919]">
-        {/* Logo Image */}
-        <Animated.Image
-          source={require('../../assets/images/logo.png')}
-          className="absolute -top-[8.5%] z-10 h-[400px] w-[400px] self-center"
-          style={logoStyle}
-          resizeMode="contain"
-        />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}>
+        <View className="flex-1 bg-[#191919]">
+          {/* Logo Image */}
+          <Animated.Image
+            source={require('../../assets/images/logo.png')}
+            className="absolute -top-[8.5%] z-10 h-[400px] w-[400px] self-center"
+            style={logoStyle}
+            resizeMode="contain"
+          />
 
-        {/* Signup Form Container */}
-        <Animated.View
-          className="absolute top-[30%] z-20 h-[70%] w-full rounded-t-[40px] bg-white"
-          style={formStyle}>
-          <View className="flex-1 items-center justify-start px-5 pb-10 pt-8">
-            {/* Headers */}
-            <Title text="New to Crew?\nSign Up" containerClassName="mb-6" />
+          {/* Signup Form Container */}
+          <Animated.View
+            className="absolute top-[27%] z-20 h-[73%] w-full rounded-t-[40px] bg-white"
+            style={formStyle}>
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1 }}
+              className="flex-1"
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled">
+              <View className="flex-1 px-5 pb-10 pt-10">
+                {canGoBack && (
+                  <View className="absolute right-5 top-4 z-10">
+                    <GoBackButton onPress={handleGoBack} />
+                  </View>
+                )}
 
-            {/* Full Name Input */}
-            <TextInputField
-              placeholder="Full Name"
-              value={fullName}
-              onChangeText={setFullName}
-              icon={require('../../assets/images/contact.png')}
-            />
+                {/* Headers */}
+                <Title text="New to Crew?\nSign Up" containerClassName="mb-6" />
 
-            {/* Phone Number Input - Using the new PhoneInputField component */}
-            <PhoneInputField
-              value={phoneNumber}
-              onChangeText={handlePhoneChange}
-              onValidChange={setIsPhoneValid}
-              placeholder="Phone Number"
-            />
+                {/* Full Name Input */}
+                <TextInputField
+                  placeholder="Full Name"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  icon={require('../../assets/images/contact.png')}
+                  containerClassName="mb-3"
+                />
 
-            {/* Sign Up Button */}
-            <CrewButton
-              variant="filled"
-              text="Sign up"
-              color="secondary"
-              size="large"
-              onPress={handleSignup}
-              loading={isLoading}
-              disabled={!fullName.trim() || !isPhoneValid || isLoading}
-              className="mt-4"
-            />
+                {/* Phone Number Input - Using the PhoneInputField component */}
+                <PhoneInputField
+                  value={phoneNumber}
+                  onChangeText={handlePhoneChange}
+                  onValidChange={setIsPhoneValid}
+                  placeholder="Phone Number"
+                  containerClassName="mb-4"
+                />
 
-            {/* Bottom Text */}
-            <Text className="mt-4 text-center font-cairo text-sm text-gray-500">
-              Already have an account?{' '}
-              <Text
-                className="font-cairo text-sm font-bold text-gray-500 underline"
-                onPress={() => navigation.navigate('Signin')}>
-                Sign in.
-              </Text>
-            </Text>
-          </View>
-        </Animated.View>
-      </View>
+                {/* Sign Up Button */}
+                <CrewButton
+                  variant="filled"
+                  text="Sign up"
+                  color="secondary"
+                  size="large"
+                  onPress={handleSignup}
+                  loading={isLoading}
+                  disabled={!fullName.trim() || !isPhoneValid || isLoading}
+                  className="mt-6"
+                />
+
+                {/* Bottom Text */}
+                <View className="mb-4 mt-2 flex-row items-center justify-center">
+                  <Text className="pt-4 font-cairo text-sm text-gray-500">
+                    Already have an account?{' '}
+                    <Text
+                      className="font-cairo text-sm font-bold text-primary-dark underline"
+                      onPress={() => navigation.navigate('Signin')}>
+                      Sign in.
+                    </Text>
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
 };

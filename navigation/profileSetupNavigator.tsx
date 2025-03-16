@@ -1,63 +1,24 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { View, Text } from 'react-native';
-import { CrewButton } from '../components/atoms';
-import { useAppDispatch, useAppSelector } from '../store';
-import { completeProfile } from '../store/slices/profileSlice';
-import { RootStackParamList, ProfileSetupStackParamList } from '../types/types';
+import ProfileBasicInfo from '../screens/profile/ProfileBasicInfo';
+import ProfilePhoto from '../screens/profile/ProfilePhoto';
+import { ProfileSetupStackParamList } from '../types/types';
+import VibeSelection from 'screens/profile/VibeSelection';
+import HobbiesSelection from 'screens/profile/HobbiesSelection';
+import SceneSelection from 'screens/profile/SceneSelection';
+import ProfileSummary from 'screens/profile/PreferenceSummary';
 
 const Stack = createStackNavigator<ProfileSetupStackParamList>();
 
-const ProfileSetupPlaceholder = () => {
-  // Properly typed navigation
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const dispatch = useAppDispatch();
-  const { userId } = useAppSelector((state) => state.auth);
-
-  const handleCompleteProfile = async () => {
-    if (userId) {
-      // Create a form data object with profile information
-      const formData = new FormData();
-      formData.append('bio', 'This is a placeholder bio');
-
-      // Complete the profile
-      await dispatch(completeProfile({ userId, profileData: formData }));
-
-      // Reset navigation to main app
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'TabNavigator' }],
-      });
-    }
-  };
-
-  return (
-    <View className="flex-1 items-center justify-center bg-white p-4">
-      <Text className="mb-6 text-center text-xl font-bold">Profile Setup Screen</Text>
-      <Text className="mb-8 text-center">
-        This is a placeholder for your multi-step profile completion flow. Replace this with your
-        actual profile setup screens.
-      </Text>
-      <CrewButton
-        variant="filled"
-        text="Complete Profile"
-        color="secondary"
-        size="large"
-        fullWidth={true}
-        onPress={handleCompleteProfile}
-      />
-    </View>
-  );
-};
-
 const ProfileSetupNavigator = () => {
   return (
-    <Stack.Navigator
-      initialRouteName="ProfileSetupPlaceholder"
-      screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ProfileSetupPlaceholder" component={ProfileSetupPlaceholder} />
+    <Stack.Navigator initialRouteName="ProfileBasicInfo" screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ProfileBasicInfo" component={ProfileBasicInfo} />
+      <Stack.Screen name="ProfilePhoto" component={ProfilePhoto} />
+      <Stack.Screen name="VibeSelection" component={VibeSelection} />
+      <Stack.Screen name="SceneSelection" component={SceneSelection} />
+      <Stack.Screen name="HobbiesSelection" component={HobbiesSelection} />
+      <Stack.Screen name="PreferenceSummary" component={ProfileSummary} />
     </Stack.Navigator>
   );
 };

@@ -31,20 +31,25 @@ export interface ILocation {
   postalCode: string;
 }
 export interface ProfileData {
-  fullName: string;
-  phoneNumber: string;
+  fullName?: string;
+  phoneNumber?: string;
   avatar?: string;
-  bio?: string;
-  vibes?: string[];
-  hobbies?: string[];
-  scenes?: string[];
-  culture?: string;
-  profileCompleted: boolean;
-  school?: string;
-  occupation?: string;
+  gender?: 'male' | 'female' | 'other';
   dateOfBirth?: string;
-  gender?: string;
-  location?: ILocation;
+  email?: string;
+  hometown?: string;
+  school?: string;
+  culture?: string;
+  vibes?: any[];
+  hobbies?: any[];
+  scenes?: any[];
+  profileCompleted?: boolean;
+}
+
+export interface PreferenceItem {
+  _id: string;
+  title: string;
+  imageUrl: string;
 }
 
 // Define the profile state
@@ -53,4 +58,11 @@ export interface ProfileState {
   isLoading: boolean;
   profileData: ProfileData | null;
   error: string | null;
+  vibes: PreferenceItem[];
+  scenes: PreferenceItem[];
+  hobbies: PreferenceItem[];
+
+  selectedVibes: string[];
+  selectedScenes: string[];
+  selectedHobbies: string[];
 }

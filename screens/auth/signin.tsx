@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Dimensions,
@@ -38,6 +38,7 @@ const Signin: React.FC = () => {
   const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
   const [loginAttempted, setLoginAttempted] = useState(false);
+  const [handlingError, setHandlingError] = useState(false);
 
   const logoOpacity = useSharedValue(0);
   const logoPosition = useSharedValue(-100);
@@ -47,6 +48,8 @@ const Signin: React.FC = () => {
   useEffect(() => {
     setCanGoBack(navigation.canGoBack?.() || false);
   }, [navigation]);
+
+  // Component mount setup
   useEffect(() => {
     dispatch(clearError());
     logoOpacity.value = withDelay(300, withTiming(1, { duration: 500 }));
@@ -56,17 +59,74 @@ const Signin: React.FC = () => {
     formPosition.value = withDelay(800, withTiming(0, { duration: 800 }));
   }, [dispatch, logoOpacity, logoPosition, formOpacity, formPosition]);
 
+  // Handle showing error alert
+  const showErrorAlert = useCallback(
+    (errorMessage: string) => {
+      setHandlingError(true);
+
+      // Check for specific "No account found" error
+      if (errorMessage.includes('No account found')) {
+        Alert.alert(
+          'Account Not Found',
+          'No account exists with this phone number. Would you like to sign up instead?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => {
+                dispatch(clearError());
+                setLoginAttempted(false);
+                setHandlingError(false);
+              },
+            },
+            {
+              text: 'Sign Up',
+              onPress: () => {
+                dispatch(clearError());
+                setLoginAttempted(false);
+                setHandlingError(false);
+                navigation.navigate('Signup');
+              },
+            },
+          ],
+          { cancelable: false }
+        );
+      } else {
+        // Handle other types of errors
+        Alert.alert(
+          'Login Error',
+          errorMessage,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                dispatch(clearError());
+                setLoginAttempted(false);
+                setHandlingError(false);
+              },
+            },
+          ],
+          { cancelable: false }
+        );
+      }
+    },
+    [dispatch, navigation]
+  );
+
+  // Handle auth state changes
   useEffect(() => {
-    if (error && loginAttempted) {
-      Alert.alert('Login Error', error || 'There was a problem signing in. Please try again.');
-      setLoginAttempted(false);
+    // Handle errors only when a login was attempted and we're not already handling an error
+    if (error && loginAttempted && !handlingError) {
+      console.log('Handling login error:', error);
+      showErrorAlert(error);
     }
 
+    // Only navigate to OTP verification if OTP was sent successfully
     if (otpSent && tempPhoneNumber && !error) {
       console.log('OTP sent, navigating to verification with phone:', tempPhoneNumber);
       navigation.navigate('OTPVerification', { phoneNumber: tempPhoneNumber });
     }
-  }, [error, otpSent, tempPhoneNumber, navigation, loginAttempted]);
+  }, [error, otpSent, tempPhoneNumber, navigation, loginAttempted, showErrorAlert, handlingError]);
 
   const logoStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,
@@ -88,15 +148,20 @@ const Signin: React.FC = () => {
       Alert.alert('Invalid Phone Number', 'Please enter a valid phone number');
       return;
     }
+
+    // Clear any previous errors and set login flag
     dispatch(clearError());
     dispatch(setAuthMode('login'));
     setLoginAttempted(true);
 
     try {
       console.log('Initiating login for phone number:', formattedPhoneNumber);
+
       const result = await dispatch(initiateLogin(formattedPhoneNumber));
+
       if (result.meta.requestStatus === 'rejected') {
         console.error('Login failed:', result.payload);
+        // The error will be handled in the useEffect
       } else {
         console.log('Login process started, waiting for OTP verification');
       }

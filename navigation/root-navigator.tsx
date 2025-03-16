@@ -8,11 +8,12 @@ import TabNavigator from './tab-navigator';
 import ProfileSetupNavigator from './profileSetupNavigator';
 import { RootStackParamList } from '../types/types';
 import { useAppDispatch, useAppSelector } from '../store';
-import { checkAuthStatus } from '../store/slices/authSlice';
+import { checkAuthStatus, invalidateSession } from '../store/slices/authSlice';
 import { checkProfileStatus } from '../store/slices/profileSlice';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
+// Minimum splash screen duration in milliseconds
 const SPLASH_DURATION = 3500;
 
 export default function RootNavigator() {
@@ -21,147 +22,152 @@ export default function RootNavigator() {
     isAuthenticated,
     isLoading: authLoading,
     userId,
-    otpSent,
+    error: authError,
   } = useAppSelector((state) => state.auth);
-  const { isProfileComplete, isLoading: profileLoading } = useAppSelector((state) => state.profile);
 
-  // State to control splash screen visibility
-  const [showSplash, setShowSplash] = useState(true);
+  const {
+    isProfileComplete,
+    isLoading: profileLoading,
+    error: profileError,
+  } = useAppSelector((state) => state.profile);
 
-  // State to track if initial auth check is complete
-  const [initialCheckComplete, setInitialCheckComplete] = useState(false);
+  // State to manage app initialization
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [splashMinTimeElapsed, setSplashMinTimeElapsed] = useState(false);
 
-  // States to track onboarding steps
-  const [hasAcceptedTerms, setHasAcceptedTerms] = useState<boolean | null>(null);
-  const [hasSetNotifications, setHasSetNotifications] = useState<boolean | null>(null);
+  // States to track onboarding completion
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState<boolean>(false);
+  const [hasSetNotifications, setHasSetNotifications] = useState<boolean>(false);
 
-  // State to track navigation ready status (for transitions between navigators)
-  const [navigationReady, setNavigationReady] = useState(false);
+  // Refs to track state and prevent unnecessary re-renders
+  const initialCheckDoneRef = useRef(false);
+  const isHandlingErrorRef = useRef(false);
 
-  // Reference to track if initial auth check has started
-  const checkStartedRef = useRef(false);
-
-  // Effect for mandatory splash screen duration - ONLY ON INITIAL APP LOAD
+  // Handle initial app loading and splash screen
   useEffect(() => {
-    console.log('Starting splash screen timer');
-    // Always show splash for minimum duration
-    const timer = setTimeout(() => {
-      console.log('Splash screen timer complete');
-      setShowSplash(false);
+    // Timer for minimum splash screen duration
+    const splashTimer = setTimeout(() => {
+      setSplashMinTimeElapsed(true);
     }, SPLASH_DURATION);
 
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Effect for checking authentication and onboarding status
-  useEffect(() => {
-    const checkStatus = async () => {
-      if (checkStartedRef.current) return;
-
-      checkStartedRef.current = true;
-      console.log('Checking auth status and onboarding...');
+    // Initial data loading - only do this once
+    const initializeApp = async () => {
+      if (initialCheckDoneRef.current) return;
 
       try {
-        // Check authentication status
+        console.log('Initializing app - first time check');
+        // Check authentication status first
         await dispatch(checkAuthStatus());
 
-        // Check onboarding steps
+        // Check onboarding completion status
         const termsAccepted = await AsyncStorage.getItem('termsAccepted');
-        setHasAcceptedTerms(termsAccepted === 'true');
-
         const notificationsSet = await AsyncStorage.getItem('notificationsSet');
+
+        setHasAcceptedTerms(termsAccepted === 'true');
         setHasSetNotifications(notificationsSet === 'true');
 
-        // After all checks are done, mark initial loading as complete
-        setInitialCheckComplete(true);
-        console.log('Initial checks complete:', {
-          termsAccepted: termsAccepted === 'true',
-          notificationsSet: notificationsSet === 'true',
-        });
+        // Mark initialization as complete and set ref to prevent re-running
+        setIsInitializing(false);
+        initialCheckDoneRef.current = true;
       } catch (error) {
-        console.error('Failed to check status:', error);
-        setInitialCheckComplete(true);
+        console.error('App initialization error:', error);
+        setIsInitializing(false);
+        initialCheckDoneRef.current = true;
       }
     };
 
-    checkStatus();
+    initializeApp();
+
+    return () => clearTimeout(splashTimer);
   }, [dispatch]);
 
-  // Effect to listen for navigation ready status (set by notification screen)
+  // Check profile status when user is authenticated and onboarding is complete
   useEffect(() => {
-    const checkNavigationReady = async () => {
-      const isReady = await AsyncStorage.getItem('navigationReady');
-      setNavigationReady(isReady === 'true');
+    if (isAuthenticated && userId && hasAcceptedTerms && hasSetNotifications) {
+      console.log('Checking profile status for authenticated user');
+      dispatch(checkProfileStatus(userId));
+    }
+  }, [isAuthenticated, userId, hasAcceptedTerms, hasSetNotifications, dispatch]);
 
-      if (isReady === 'true') {
-        // Re-check onboarding status to ensure we have the latest values
+  // Handle profile errors only
+  useEffect(() => {
+    // Only handle profile errors if the user is authenticated and we're not already handling an error
+    if (isAuthenticated && profileError && !isHandlingErrorRef.current) {
+      // Handle session expiration or authorization errors
+      if (
+        typeof profileError === 'string' &&
+        (profileError.includes('Unauthorized') || profileError.includes('expired'))
+      ) {
+        console.log('Profile unauthorized error detected, handling session invalidation');
+
+        isHandlingErrorRef.current = true;
+        // Use invalidateSession to show a message and log out
+        dispatch(invalidateSession('Your session has expired. Please log in again.')).finally(
+          () => {
+            isHandlingErrorRef.current = false;
+          }
+        );
+      }
+    }
+  }, [profileError, isAuthenticated, dispatch]);
+
+  // Listen for changes in onboarding status - with reduced polling frequency
+  useEffect(() => {
+    // Only check onboarding status when authentication changes or on initial load
+    const checkOnboardingStatus = async () => {
+      if (isAuthenticated) {
         const termsAccepted = await AsyncStorage.getItem('termsAccepted');
-        setHasAcceptedTerms(termsAccepted === 'true');
-
         const notificationsSet = await AsyncStorage.getItem('notificationsSet');
+
+        setHasAcceptedTerms(termsAccepted === 'true');
         setHasSetNotifications(notificationsSet === 'true');
-
-        // If user is authenticated, check their profile status
-        if (isAuthenticated && userId) {
-          dispatch(checkProfileStatus(userId));
-        }
-
-        // Reset the navigation ready flag so it can be used again if needed
-        await AsyncStorage.removeItem('navigationReady');
-        setNavigationReady(false);
       }
     };
 
-    // Set up a polling mechanism to check for navigation ready status
-    const intervalId = setInterval(checkNavigationReady, 500);
+    // Only check on auth state change
+    checkOnboardingStatus();
 
+    // Use a longer interval to reduce unnecessary checks
+    const intervalId = setInterval(checkOnboardingStatus, 3000);
     return () => clearInterval(intervalId);
-  }, [dispatch, isAuthenticated, userId]);
+  }, [isAuthenticated]);
 
-  // Effect for updating onboarding status when authentication state changes
-  useEffect(() => {
-    if (isAuthenticated && userId) {
-      const checkOnboardingStatus = async () => {
-        const termsAccepted = await AsyncStorage.getItem('termsAccepted');
-        setHasAcceptedTerms(termsAccepted === 'true');
+  // Determine if we should still show the splash screen
+  // IMPORTANT: We ONLY show splash during initial load, never for auth errors
+  const showSplash = isInitializing || !splashMinTimeElapsed;
 
-        const notificationsSet = await AsyncStorage.getItem('notificationsSet');
-        setHasSetNotifications(notificationsSet === 'true');
-
-        // Check profile status when auth changes
-        dispatch(checkProfileStatus(userId));
-      };
-
-      checkOnboardingStatus();
-    }
-  }, [isAuthenticated, userId, dispatch]);
-
+  // For debugging
   console.log('Navigation state:', {
     showSplash,
-    initialCheckComplete,
+    isInitializing,
+    splashMinTimeElapsed,
     isAuthenticated,
+    authLoading,
     isProfileComplete,
-    otpSent,
     hasAcceptedTerms,
     hasSetNotifications,
-    navigationReady,
+    profileError,
   });
 
-  // Only show splash screen during initial app load
-  if (showSplash || !initialCheckComplete) {
-    console.log('Showing splash screen');
+  // Show splash screen ONLY during initialization
+  if (showSplash) {
     return <SplashScreen />;
   }
 
+  // Main navigation structure
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!isAuthenticated ? (
+        // Authentication flow
         <Stack.Screen name="Auth" component={AuthNavigator} />
       ) : !hasAcceptedTerms || !hasSetNotifications ? (
+        // Onboarding flow
         <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
       ) : !isProfileComplete ? (
+        // Profile setup flow
         <Stack.Screen name="profileSetUp" component={ProfileSetupNavigator} />
       ) : (
+        // Main app
         <Stack.Screen name="TabNavigator" component={TabNavigator} />
       )}
     </Stack.Navigator>

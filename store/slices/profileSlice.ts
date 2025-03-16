@@ -1,16 +1,23 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { profileService } from '../../services/api';
 import { ProfileState, ProfileData } from '../types';
+import { PreferenceItem, ProfileUpdateData } from '../../services/profileService';
 
-// Initialize profile state
+// Enhanced initial state with preferences
 const initialState: ProfileState = {
   isProfileComplete: false,
   isLoading: false,
   profileData: null,
   error: null,
+  vibes: [],
+  scenes: [],
+  hobbies: [],
+  selectedVibes: [],
+  selectedScenes: [],
+  selectedHobbies: [],
 };
 
-// Async thunk for checking profile status
+// Existing thunks
 export const checkProfileStatus = createAsyncThunk(
   'profile/checkStatus',
   async (userId: string, { rejectWithValue }) => {
@@ -32,7 +39,6 @@ export const checkProfileStatus = createAsyncThunk(
   }
 );
 
-// Async thunk for getting full profile
 export const getUserProfile = createAsyncThunk(
   'profile/getUserProfile',
   async (userId: string, { rejectWithValue }) => {
@@ -49,7 +55,6 @@ export const getUserProfile = createAsyncThunk(
   }
 );
 
-// Async thunk for completing profile
 export const completeProfile = createAsyncThunk(
   'profile/completeProfile',
   async (
@@ -72,6 +77,63 @@ export const completeProfile = createAsyncThunk(
   }
 );
 
+// New thunks for preferences
+export const fetchVibes = createAsyncThunk('profile/fetchVibes', async (_, { rejectWithValue }) => {
+  try {
+    const response = await profileService.getVibes();
+    return response;
+  } catch (error) {
+    console.error('Fetch vibes error:', error);
+    return rejectWithValue(error);
+  }
+});
+
+export const fetchScenes = createAsyncThunk(
+  'profile/fetchScenes',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await profileService.getScenes();
+      return response;
+    } catch (error) {
+      console.error('Fetch scenes error:', error);
+      return rejectWithValue(error);
+    }
+  }
+);
+
+export const fetchHobbies = createAsyncThunk(
+  'profile/fetchHobbies',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await profileService.getHobbies();
+      return response;
+    } catch (error) {
+      console.error('Fetch hobbies error:', error);
+      return rejectWithValue(error);
+    }
+  }
+);
+
+// Incremental profile updates
+export const updateProfile = createAsyncThunk(
+  'profile/updateProfile',
+  async (
+    { userId, profileData }: { userId: string; profileData: ProfileUpdateData },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await profileService.updateProfile(userId, profileData);
+      return {
+        profileData: response.data,
+        success: response?.data?.success,
+      };
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return rejectWithValue(error);
+    }
+  }
+);
+
 // Create the profile slice
 const profileSlice = createSlice({
   name: 'profile',
@@ -81,9 +143,22 @@ const profileSlice = createSlice({
       state.isProfileComplete = false;
       state.profileData = null;
       state.error = null;
+      state.selectedVibes = [];
+      state.selectedScenes = [];
+      state.selectedHobbies = [];
     },
     clearProfileError: (state) => {
       state.error = null;
+    },
+    // New reducers for preferences
+    setSelectedVibes: (state, action: PayloadAction<string[]>) => {
+      state.selectedVibes = action.payload;
+    },
+    setSelectedScenes: (state, action: PayloadAction<string[]>) => {
+      state.selectedScenes = action.payload;
+    },
+    setSelectedHobbies: (state, action: PayloadAction<string[]>) => {
+      state.selectedHobbies = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -100,6 +175,29 @@ const profileSlice = createSlice({
         state.isProfileComplete = action.payload.isProfileComplete;
         state.profileData = action.payload.profileData;
         state.error = null;
+
+        // Also set selected items if profileData includes them
+        if (action.payload.profileData) {
+          const data = action.payload.profileData;
+
+          if (data.vibes) {
+            state.selectedVibes = data.vibes.map((v: any) =>
+              typeof v === 'string' ? v : v.id || v._id
+            );
+          }
+
+          if (data.scenes) {
+            state.selectedScenes = data.scenes.map((s: any) =>
+              typeof s === 'string' ? s : s.id || s._id
+            );
+          }
+
+          if (data.hobbies) {
+            state.selectedHobbies = data.hobbies.map((h: any) =>
+              typeof h === 'string' ? h : h.id || h._id
+            );
+          }
+        }
 
         console.log('Profile status updated:', {
           isProfileComplete: state.isProfileComplete,
@@ -126,6 +224,30 @@ const profileSlice = createSlice({
 
       if (action.payload?.success !== false) {
         state.profileData = action.payload.profileData;
+
+        // Also set selected items if profileData includes them
+        if (action.payload.profileData) {
+          const data = action.payload.profileData;
+
+          if (data.vibes) {
+            state.selectedVibes = data.vibes.map((v: any) =>
+              typeof v === 'string' ? v : v.id || v._id
+            );
+          }
+
+          if (data.scenes) {
+            state.selectedScenes = data.scenes.map((s: any) =>
+              typeof s === 'string' ? s : s.id || s._id
+            );
+          }
+
+          if (data.hobbies) {
+            state.selectedHobbies = data.hobbies.map((h: any) =>
+              typeof h === 'string' ? h : h.id || h._id
+            );
+          }
+        }
+
         state.error = null;
       } else {
         state.error = 'Failed to get user profile';
@@ -159,8 +281,92 @@ const profileSlice = createSlice({
       state.isLoading = false;
       state.error = action.payload as string;
     });
+
+    // Fetch Vibes
+    builder.addCase(fetchVibes.pending, (state) => {
+      state.isLoading = true;
+    });
+    builder.addCase(fetchVibes.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.vibes = action.payload.data || [];
+    });
+    builder.addCase(fetchVibes.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+
+    // Fetch Scenes
+    builder.addCase(fetchScenes.pending, (state) => {
+      state.isLoading = true;
+    });
+    builder.addCase(fetchScenes.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.scenes = action.payload.data || [];
+    });
+    builder.addCase(fetchScenes.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+
+    // Fetch Hobbies
+    builder.addCase(fetchHobbies.pending, (state) => {
+      state.isLoading = true;
+    });
+    builder.addCase(fetchHobbies.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.hobbies = action.payload.data || [];
+    });
+    builder.addCase(fetchHobbies.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+
+    // Update Profile
+    builder.addCase(updateProfile.pending, (state) => {
+      state.isLoading = true;
+    });
+    builder.addCase(updateProfile.fulfilled, (state, action) => {
+      state.isLoading = false;
+
+      if (action.payload?.success !== false) {
+        state.profileData = action.payload.profileData;
+
+        // If the update included vibes, scenes, or hobbies, ensure selected arrays are up to date
+        const data = action.payload.profileData;
+        if (data.vibes) {
+          state.selectedVibes = data.vibes.map((v: any) =>
+            typeof v === 'string' ? v : v.id || v._id
+          );
+        }
+
+        if (data.scenes) {
+          state.selectedScenes = data.scenes.map((s: any) =>
+            typeof s === 'string' ? s : s.id || s._id
+          );
+        }
+
+        if (data.hobbies) {
+          state.selectedHobbies = data.hobbies.map((h: any) =>
+            typeof h === 'string' ? h : h.id || h._id
+          );
+        }
+      } else {
+        state.error = 'Failed to update profile';
+      }
+    });
+    builder.addCase(updateProfile.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
   },
 });
 
-export const { resetProfileState, clearProfileError } = profileSlice.actions;
+export const {
+  resetProfileState,
+  clearProfileError,
+  setSelectedVibes,
+  setSelectedScenes,
+  setSelectedHobbies,
+} = profileSlice.actions;
+
 export default profileSlice.reducer;

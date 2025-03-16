@@ -17,6 +17,8 @@ import {
 import RootNavigator from './navigation/root-navigator';
 import ReduxProvider from './store/ReduxProvider';
 
+import TestProfileScreen from './TestProfileScreen';
+
 export default function App() {
   // Load fonts
   let [fontsLoaded, fontError] = useFonts({

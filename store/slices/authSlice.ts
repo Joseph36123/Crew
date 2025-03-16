@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from 'services/api';
 import { AuthState, initialState } from 'store/types';
+import { Alert } from 'react-native';
 
 // Helper function to handle phone number formatting
 const formatPhoneNumber = (phoneNumber: string) => {
@@ -160,14 +161,41 @@ export const checkAuthStatus = createAsyncThunk(
 
 export const logout = createAsyncThunk('auth/logout', async (_, { rejectWithValue }) => {
   try {
-    await AsyncStorage.removeItem('userToken');
-    await AsyncStorage.removeItem('userId');
+    const allKeys = await AsyncStorage.getAllKeys();
+
+    const keysToRemove = ['userToken', 'userId', 'refreshToken', 'tokenExpiry'];
+
+    const removePromises = keysToRemove.map((key) => {
+      if (allKeys.includes(key)) {
+        return AsyncStorage.removeItem(key);
+      }
+      return Promise.resolve();
+    });
+
+    await Promise.all(removePromises);
+    console.log('User logged out, auth data cleared from storage');
+
     return { success: true };
   } catch (error) {
     console.error('Logout error:', error);
-    return rejectWithValue(error);
+    return { success: true };
   }
 });
+
+export const invalidateSession = createAsyncThunk(
+  'auth/invalidateSession',
+  async (message: string = 'Your session has expired. Please log in again.', { dispatch }) => {
+    try {
+      Alert.alert('Session Expired', message, [{ text: 'OK' }]);
+      await dispatch(logout());
+
+      return { success: true };
+    } catch (error) {
+      console.error('Session invalidation error:', error);
+      return { success: true };
+    }
+  }
+);
 
 // create the auth slice
 const authSlice = createSlice({
@@ -350,6 +378,17 @@ const authSlice = createSlice({
       state.token = null;
       state.userId = null;
       state.tempPhoneNumber = null;
+    });
+
+    builder.addCase(invalidateSession.fulfilled, (state) => {
+      state.isAuthenticated = false;
+      state.token = null;
+      state.userId = null;
+      state.tempPhoneNumber = null;
+      state.tempFullName = null;
+      state.otpSent = false;
+      state.error = null;
+      state.currentAuthMode = null;
     });
   },
 });
