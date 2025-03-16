@@ -154,7 +154,6 @@ const ProfileBasicInfo = () => {
   }, [userId, dispatch, navigation]);
 
   const handleContinue = async () => {
-    // Validate required fields
     if (!selectedGender) {
       Alert.alert('Required Field', 'Please select your gender to continue');
       return;
@@ -176,7 +175,7 @@ const ProfileBasicInfo = () => {
           profileData: {
             gender: selectedGender,
             dateOfBirth,
-            age: age, // Explicitly include age parameter
+            age: age,
             school,
             culture,
             hometown,
@@ -184,7 +183,6 @@ const ProfileBasicInfo = () => {
         })
       ).unwrap();
 
-      // Navigate to the photo upload screen
       navigation.navigate('ProfilePhoto');
     } catch (error) {
       console.error('Failed to update profile:', error);
@@ -192,7 +190,6 @@ const ProfileBasicInfo = () => {
     }
   };
 
-  // If still in initial loading state, show a loading indicator
   if (initialLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -202,7 +199,6 @@ const ProfileBasicInfo = () => {
     );
   }
 
-  // Check if all fields are filled
   const areAllFieldsFilled = selectedGender && age >= 18 && hometown && school && culture;
 
   return (

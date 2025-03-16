@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Alert, StyleSheet, ActivityIndicator } from 'react-native';
-import { CommonActions, useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { ProfileSetupStackParamList, RootStackParamList } from '../../types/types';
+import { CommonActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { ProfileSetupStackParamList } from '../../types/types';
 import { ProfileHeader, ProfileContainer } from '../../components/molecules';
 import { useAppDispatch, useAppSelector } from '../../store';
 import {
   updateProfile,
+  getUserProfile,
   fetchVibes,
   fetchScenes,
   fetchHobbies,
@@ -17,11 +18,6 @@ import {
 import { CrewButton } from '../../components/atoms';
 import SelectedPreferenceList from 'components/molecules/SelectedPreferenceList';
 import PreferenceSelectionModal from 'components/molecules/PreferenceSelectionModal';
-
-type PreferenceSummaryNavigationProp = StackNavigationProp<
-  ProfileSetupStackParamList,
-  'PreferenceSummary'
->;
 
 type ModalType = 'vibes' | 'scenes' | 'hobbies' | null;
 
@@ -37,7 +33,9 @@ const PreferenceSummary = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<ModalType>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [navigationAttempted, setNavigationAttempted] = useState(false);
 
+  // Load preferences when component mounts
   useEffect(() => {
     if (userId) {
       dispatch(fetchVibes());
@@ -77,6 +75,7 @@ const PreferenceSummary = () => {
     setModalVisible(true);
   };
 
+  // Handle item selection in modal
   const handleItemToggle = (itemId: string) => {
     if (!modalType) return;
 
@@ -99,7 +98,6 @@ const PreferenceSummary = () => {
   };
 
   const saveSelections = () => {
-    // Log the selected items before saving
     if (modalType === 'vibes') {
       console.log('Updated vibes selection (IDs for DB):', selectedVibes);
     } else if (modalType === 'scenes') {
@@ -108,7 +106,6 @@ const PreferenceSummary = () => {
       console.log('Updated hobbies selection (IDs for DB):', selectedHobbies);
     }
 
-    // Close modal
     setModalVisible(false);
   };
 
@@ -127,6 +124,7 @@ const PreferenceSummary = () => {
     }
 
     try {
+      // Show saving indicator
       setIsSavingProfile(true);
 
       // Log all selected preferences before saving to DB
@@ -135,6 +133,7 @@ const PreferenceSummary = () => {
       console.log('Scenes:', selectedScenes);
       console.log('Hobbies:', selectedHobbies);
 
+      // Step 1: Update all preferences and mark profile as complete
       await dispatch(
         updateProfile({
           userId,
@@ -147,18 +146,32 @@ const PreferenceSummary = () => {
         })
       ).unwrap();
 
+      console.log('Profile preferences updated, now fetching complete profile data...');
+
+      // Step 2: Fetch the updated profile to ensure isProfileComplete flag is set
+      await dispatch(getUserProfile(userId)).unwrap();
+
       console.log('Profile successfully completed, navigating to main app');
 
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{ name: 'TabNavigator' }],
-        })
-      );
+      // Prevent multiple navigation attempts
+      if (!navigationAttempted) {
+        setNavigationAttempted(true);
+
+        // Step 3: Navigate to the main app
+        setTimeout(() => {
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: 'TabNavigator' }],
+            })
+          );
+        }, 500); // Short delay to allow state updates to process
+      }
     } catch (error) {
       console.error('Failed to complete profile:', error);
       Alert.alert('Error', 'Failed to complete your profile. Please try again.');
       setIsSavingProfile(false);
+      setNavigationAttempted(false);
     }
   };
 
@@ -178,6 +191,7 @@ const PreferenceSummary = () => {
           <Text style={styles.titleText}>Your Preferences</Text>
           <Text style={styles.subtitleText}>Review your selections before completing setup</Text>
 
+          {/* Show loading indicator while preferences are being fetched */}
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#AAD3FF" />
@@ -185,24 +199,28 @@ const PreferenceSummary = () => {
             </View>
           ) : (
             <>
+              {/* Vibes Section */}
               <SelectedPreferenceList
                 title="Your Vibe"
                 items={getSelectedItemDetails('vibes')}
                 onAddPress={() => openModal('vibes')}
               />
 
+              {/* Scenes Section */}
               <SelectedPreferenceList
                 title="Your Scene"
                 items={getSelectedItemDetails('scenes')}
                 onAddPress={() => openModal('scenes')}
               />
 
+              {/* Hobbies Section */}
               <SelectedPreferenceList
                 title="Your Thing"
                 items={getSelectedItemDetails('hobbies')}
                 onAddPress={() => openModal('hobbies')}
               />
 
+              {/* Complete Button */}
               <CrewButton
                 variant="filled"
                 text="Looks Good"
@@ -225,6 +243,7 @@ const PreferenceSummary = () => {
         </ProfileContainer>
       </ScrollView>
 
+      {/* Selection Modal */}
       {modalType && (
         <PreferenceSelectionModal
           title={
