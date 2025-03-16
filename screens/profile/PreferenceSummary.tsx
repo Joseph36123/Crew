@@ -25,9 +25,6 @@ type PreferenceSummaryNavigationProp = StackNavigationProp<
 
 type ModalType = 'vibes' | 'scenes' | 'hobbies' | null;
 
-/**
- * PreferenceSummary screen for reviewing and finalizing profile setup
- */
 const PreferenceSummary = () => {
   const dispatch = useAppDispatch();
   const navigation = useNavigation();

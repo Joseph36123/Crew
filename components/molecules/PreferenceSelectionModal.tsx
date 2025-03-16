@@ -42,12 +42,10 @@ const PreferenceSelectionModal: React.FC<PreferenceSelectionModalProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
 
-  // Update filtered items when items change or search text changes
   useEffect(() => {
     if (items && visible) {
       setIsSearching(true);
 
-      // Add a slight delay to make the loading state visible
       const timer = setTimeout(() => {
         if (searchText) {
           setFilteredItems(
@@ -63,7 +61,6 @@ const PreferenceSelectionModal: React.FC<PreferenceSelectionModalProps> = ({
     }
   }, [items, searchText, visible]);
 
-  // Reset search when modal opens
   useEffect(() => {
     if (visible) {
       setSearchText('');
@@ -72,7 +69,6 @@ const PreferenceSelectionModal: React.FC<PreferenceSelectionModalProps> = ({
     }
   }, [visible, items]);
 
-  // For debugging
   useEffect(() => {
     if (visible) {
       console.log('Modal items:', items);
@@ -89,9 +85,7 @@ const PreferenceSelectionModal: React.FC<PreferenceSelectionModalProps> = ({
     console.log(`Failed to load image for item in modal: ${itemId}`);
   };
 
-  // Generate a random background color based on the item ID for placeholders
   const getRandomColor = (id: string) => {
-    // Generate a consistent color based on the ID
     const hash = id.split('').reduce((acc, char) => {
       return char.charCodeAt(0) + ((acc << 5) - acc);
     }, 0);
@@ -100,7 +94,6 @@ const PreferenceSelectionModal: React.FC<PreferenceSelectionModalProps> = ({
     return `hsl(${h}, 70%, 40%)`;
   };
 
-  // Render each item
   const renderItem = ({ item }: { item: PreferenceItem }) => {
     const isSelected = selectedItems.includes(item._id);
     const hasImageError = imageLoadErrors[item._id];
