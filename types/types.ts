@@ -43,6 +43,39 @@ export interface PhoneInputFieldProps {
   defaultCode?: string;
 }
 
+export interface AuthState {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  token: string | null;
+  userId: string | null;
+  tempPhoneNumber: string | null; // For OTP verification flow
+  tempFullName: string | null; // For registration flow
+  error: string | null;
+  otpSent: boolean;
+  currentAuthMode: 'login' | 'register' | null;
+}
+
+export const initialState: AuthState = {
+  isAuthenticated: false,
+  isLoading: false,
+  token: null,
+  userId: null,
+  tempPhoneNumber: null,
+  tempFullName: null,
+  error: null,
+  otpSent: false,
+  currentAuthMode: null,
+};
+
+// Define interface for profile data
+export interface ILocation {
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+}
+
 export interface ProfileData {
   fullName?: string;
   phoneNumber?: string;
@@ -50,9 +83,9 @@ export interface ProfileData {
   gender?: 'male' | 'female' | 'other';
   dateOfBirth?: string;
   email?: string;
+  hometown?: string;
   school?: string;
   culture?: string;
-  hometown?: string;
   vibes?: any[];
   hobbies?: any[];
   scenes?: any[];
@@ -77,4 +110,23 @@ export interface ProfileState {
   selectedVibes: string[];
   selectedScenes: string[];
   selectedHobbies: string[];
+}
+
+export interface ProfileUpdateData {
+  [key: string]: any;
+  fullName?: string;
+  phoneNumber?: string;
+  avatar?: string;
+  gender?: 'male' | 'female' | 'other';
+  dateOfBirth?: string;
+  age?: number;
+  email?: string;
+  hometown?: string;
+  school?: string;
+  culture?: string;
+  vibes?: string[];
+  hobbies?: string[];
+  scenes?: string[];
+  termsAndConditionsAccepted?: boolean;
+  profileCompleted?: boolean;
 }

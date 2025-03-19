@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
-import { View, Image, Dimensions, TouchableWithoutFeedback, Keyboard, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Image,
+  Dimensions,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { OnboardingStackParamList } from '../../navigation/onboarding-navigator';
 import { CrewButton, Checkbox, Title, Subtitle } from '../../components/atoms';
 import { useAppDispatch, useAppSelector } from '../../store';
+import { updateProfile, getUserProfile } from '../../store/slices/profileSlice';
 
 const { height } = Dimensions.get('window');
 
@@ -18,10 +27,55 @@ const TermsConditionsScreen: React.FC = () => {
 
   // Getting user ID from auth state
   const { userId } = useAppSelector((state) => state.auth);
+  const { isLoading: profileLoading } = useAppSelector((state) => state.profile);
 
   const [agreedTnC, setAgreedTnC] = useState(false);
   const [agreedPrivacy, setAgreedPrivacy] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  // Check if the user has already accepted terms on component mount
+  useEffect(() => {
+    const checkTermsAcceptance = async () => {
+      if (!userId) {
+        setInitialLoading(false);
+        return;
+      }
+
+      try {
+        // First, check AsyncStorage (for faster user experience)
+        const localTermsAccepted = await AsyncStorage.getItem('termsAccepted');
+
+        if (localTermsAccepted === 'true') {
+          console.log('Terms already accepted locally');
+          // Skip to notifications screen
+          navigation.navigate('Notifications');
+          return;
+        }
+
+        // If not in AsyncStorage, fetch user profile to check if terms accepted in DB
+        console.log('Fetching user profile to check terms acceptance...');
+        const response = await dispatch(getUserProfile(userId)).unwrap();
+
+        // Determine where the profile data is located in the response
+        const profileData = response?.profileData || response?.profileData?.data || {};
+
+        if (profileData.termsAndConditionsAccepted) {
+          console.log('Terms already accepted in database');
+          // Save to AsyncStorage for future reference
+          await AsyncStorage.setItem('termsAccepted', 'true');
+          // Skip to notifications screen
+          navigation.navigate('Notifications');
+        }
+      } catch (error) {
+        console.error('Failed to check terms acceptance:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    checkTermsAcceptance();
+  }, [userId, dispatch, navigation]);
 
   const handleContinue = async () => {
     if (!agreedTnC || !agreedPrivacy) {
@@ -32,11 +86,30 @@ const TermsConditionsScreen: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Save that user has accepted terms to AsyncStorage
+      // Save to AsyncStorage
       await AsyncStorage.setItem('termsAccepted', 'true');
       console.log('Terms acceptance saved to AsyncStorage');
 
-      // Navigate to the Notifications screen in the same navigator context
+      // Save to database if user is logged in
+      if (userId) {
+        console.log('Saving terms acceptance to database for user:', userId);
+
+        // Update profile with terms acceptance
+        await dispatch(
+          updateProfile({
+            userId,
+            profileData: {
+              termsAndConditionsAccepted: true,
+            },
+          })
+        ).unwrap();
+
+        console.log('Terms acceptance saved to database');
+      } else {
+        console.warn('No user ID available, terms only saved locally');
+      }
+
+      // Navigate to the Notifications screen
       navigation.navigate('Notifications');
     } catch (error) {
       console.error('Error saving terms acceptance:', error);
@@ -45,6 +118,15 @@ const TermsConditionsScreen: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Show loading indicator while checking existing terms acceptance
+  if (initialLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-[#191919]">
+        <ActivityIndicator size="large" color="#FFFFFF" />
+      </View>
+    );
+  }
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -91,8 +173,8 @@ const TermsConditionsScreen: React.FC = () => {
               size="large"
               fullWidth={true}
               onPress={handleContinue}
-              loading={isLoading}
-              disabled={!agreedTnC || !agreedPrivacy || isLoading}
+              loading={isLoading || profileLoading}
+              disabled={!agreedTnC || !agreedPrivacy || isLoading || profileLoading}
             />
           </View>
         </View>

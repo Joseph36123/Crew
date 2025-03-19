@@ -18,6 +18,7 @@ export interface ProfileUpdateData {
   hobbies?: string[];
   scenes?: string[];
   profileCompleted?: boolean;
+  termsAndConditionsAccepted?: boolean;
 }
 
 export const profileService = {
